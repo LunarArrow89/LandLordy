@@ -275,6 +275,10 @@
 
 
   function locatePlayer() {
+    if (!map) {
+      showToast("Add your Google Maps API key in the menu first.");
+      return;
+    }
     if (!navigator.geolocation) {
       showToast("Location is not available in this browser.");
       return;
@@ -334,6 +338,10 @@
 
   async function searchPlace(query) {
     if (!query.trim()) return;
+    if (!map) {
+      showToast("Add your Google Maps API key in the menu first.");
+      return;
+    }
     setStatus("Searching for " + query.trim() + "…");
     try {
       const response = await fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=" + encodeURIComponent(query.trim()));
