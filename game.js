@@ -17,6 +17,7 @@
   let toastTimer = null;
   let currentDevicePosition = null;
   let playerLocationMarker = null;
+  let playerTileIndex = null;
 
   function loadState() {
     try {
@@ -51,8 +52,24 @@
     saveState();
   }
 
+  function findPlayerTile() {
+    if (!map || !currentDevicePosition || !window.L) return null;
+    const point = map.latLngToContainerPoint([currentDevicePosition.lat, currentDevicePosition.lng]);
+    const mapRect = map.getContainer().getBoundingClientRect();
+    const screenX = mapRect.left + point.x;
+    const screenY = mapRect.top + point.y;
+    const buttons = $("territory-layer").querySelectorAll(".territory-tile");
+    for (let i = 0; i < buttons.length; i++) {
+      const rect = buttons[i].getBoundingClientRect();
+      if (screenX >= rect.left && screenX <= rect.right &&
+          screenY >= rect.top && screenY <= rect.bottom) return i;
+    }
+    return null;
+  }
+
   function renderTiles() {
     const layer = map ? $("territory-layer") : $("fallback-tiles");
+    playerTileIndex = findPlayerTile();
     layer.innerHTML = "";
     for (let i = 0; i < TILE_COUNT; i++) {
       const data = tileData(i);
@@ -64,10 +81,17 @@
         (state.selected === i ? " selected" : "");
       button.setAttribute("aria-label", tileDescription(i, data));
       button.title = tileDescription(i, data);
+      button.disabled = map ? playerTileIndex !== i : true;
+      if (map && playerTileIndex !== i) button.classList.add("out-of-reach");
+      if (playerTileIndex === i) button.classList.add("player-here");
       button.innerHTML = data.built ? '<span class="tile-symbol">⌂</span>' :
         data.owner ? '<span class="tile-symbol">◆</span>' :
         data.resource ? '<span class="tile-symbol">' + (data.resource === "wood" ? "♣" : "◈") + '</span>' : "";
       button.addEventListener("click", () => {
+        if (findPlayerTile() !== i) {
+          showToast("You can only interact with the square you're standing in.");
+          return;
+        }
         state.selected = i;
         setStatus("Tile " + (i + 1) + " selected.");
         render();
@@ -95,6 +119,7 @@
     }
     const index = state.selected;
     const data = tileData(index);
+    const standingHere = playerTileIndex === index;
     $("tile-tag").textContent = data.owner ? "YOURS" : data.resource ? "RESOURCE" : "OPEN";
     const title = data.built ? "Outpost · Tile " + (index + 1) :
       data.owner ? "Your land · Tile " + (index + 1) :
@@ -107,15 +132,15 @@
     $("tile-details").innerHTML = '<div class="tile-icon">' + (data.built ? "⌂" : data.resource ? (data.resource === "wood" ? "♣" : "◈") : "▦") + '</div><div><strong></strong><p></p></div>';
     $("tile-details").querySelector("strong").textContent = title;
     $("tile-details").querySelector("p").textContent = desc;
-    claim.disabled = data.owner || state.coins < CLAIM_COST;
+    claim.disabled = !standingHere || data.owner || state.coins < CLAIM_COST;
     claim.textContent = data.owner ? "ALREADY CLAIMED" : "CLAIM TILE · " + CLAIM_COST + " COINS";
-    build.disabled = !data.owner || data.built || state.coins < BUILD_COST || state.wood < 1;
+    build.disabled = !standingHere || !data.owner || data.built || state.coins < BUILD_COST || state.wood < 1;
     build.textContent = data.built ? "OUTPOST BUILT" : "BUILD · " + BUILD_COST + " COINS + 1 WOOD";
   }
 
   function claimSelected() {
     const i = state.selected;
-    if (i === null) return;
+    if (i === null || findPlayerTile() !== i) { showToast("You must be standing on that square to claim it."); return; }
     const data = tileData(i);
     if (data.owner || state.coins < CLAIM_COST) return;
     state.coins -= CLAIM_COST;
@@ -131,7 +156,7 @@
 
   function buildSelected() {
     const i = state.selected;
-    if (i === null) return;
+    if (i === null || findPlayerTile() !== i) { showToast("You must be standing on that square to build."); return; }
     const data = tileData(i);
     if (!data.owner || data.built || state.coins < BUILD_COST || state.wood < 1) return;
     state.coins -= BUILD_COST;
@@ -205,6 +230,7 @@
     if (currentDevicePosition) showPlayerOnMap(currentDevicePosition);
     map.on("moveend zoomend", () => {
       $("map-location").textContent = "OPENSTREETMAP · ZOOM " + map.getZoom();
+      refreshPlayerTile();
     });
     setStatus("OpenStreetMap loaded. Select a tile to claim it!");
     $("map-location").textContent = "OPENSTREETMAP";
@@ -230,7 +256,8 @@
         $("locate-me").disabled = false;
         $("locate-me").textContent = "⌖ MY LOCATION";
         showPlayerOnMap(currentDevicePosition);
-        setStatus("Map centered on your location. Location is only used in this tab.");
+        refreshPlayerTile();
+        setStatus("You can only interact with the square containing your location.");
         showToast("Your location is on the map.");
       },
       (error) => {
@@ -260,6 +287,16 @@
     }).addTo(map);
     playerLocationMarker.bindTooltip("Your current location");
     $("map-location").textContent = "YOUR CURRENT AREA";
+    refreshPlayerTile();
+  }
+
+  function refreshPlayerTile() {
+    const previous = state.selected;
+    renderTiles();
+    if (previous !== null && previous !== playerTileIndex) state.selected = null;
+    renderSelected();
+    if (playerTileIndex === null) setStatus("Your location is outside the visible territory grid. Move the map so your location marker is over a square.");
+    else setStatus("You are on square " + (playerTileIndex + 1) + ". Only this square can be used.");
   }
 
   async function searchPlace(query) {
@@ -299,6 +336,7 @@
     $("place-search").value = "";
     if (map) map.setView([34.0522, -118.2437], 14);
     $("map-location").textContent = "GENERATED STARTER DISTRICT";
+    refreshPlayerTile();
   });
   $("clear-log").addEventListener("click", () => { $("activity-log").innerHTML = ""; });
   $("reset-game").addEventListener("click", () => {
