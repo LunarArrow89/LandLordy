@@ -15,7 +15,7 @@
       <a class="brand" href="#" aria-label="LandLordy home"><span class="brand-mark">L</span><span>LANDLORDY</span></a>
       <div class="top-stats" aria-live="polite">
         <div class="stat"><span class="stat-label">COINS</span><strong id="coins">120</strong></div>
-        <div class="stat"><span class="stat-label">LAND</span><strong id="land-count">0</strong></div>
+        <div class="stat"><span class="stat-label">LEVEL</span><strong id="level">1</strong></div>
         
       </div>
       <button id="menu-button" class="icon-button" aria-label="Open settings">☰</button>
@@ -49,38 +49,21 @@
             <div class="fallback-note">LOADING MAP DATA…</div>
           </div>
           <div id="territory-layer" class="territory-layer" aria-label="Territory grid"></div>
-          <div class="map-legend"><span><i class="legend-owned"></i> Yours</span><span><i class="legend-open"></i> Available</span></div>
+          
           <div id="map-status" class="map-status" role="status">Demo map ready — claim a nearby tile!</div>
         </div>
-        <div class="map-footer"><span id="map-location">GENERATED STARTER DISTRICT</span><span>MAP DATA IS FOR GAMEPLAY ONLY</span></div>
+        
       </section>
 
-      <aside class="side-panel">
-        <section class="welcome-card">
-          <p class="eyebrow">YOUR LITTLE EMPIRE</p>
-          <h1>Make this place<br><span>your place.</span></h1>
-          <p class="welcome-copy">Claim squares of land and grow your territory. Every square you claim becomes part of your land.</p>
-        </section>
-
+      <aside class="floating-panel">
         <section class="action-card">
-          <div class="section-heading"><h2>SELECTED TILE</h2><span id="tile-tag" class="tag">NONE</span></div>
-          <div id="tile-details" class="tile-details">
-            <div class="tile-icon">▦</div>
-            <div><strong>Pick a tile</strong><p>Select any open square on the map to see what it contains.</p></div>
-          </div>
-          <div class="tile-actions">
-            <button id="claim-button" class="primary-button" disabled>CLAIM TILE · 25 COINS</button>
-          </div>
+          <div class="section-heading"><h2>LAND SQUARE</h2><span id="tile-tag" class="tag">NONE</span></div>
+          <div id="tile-details" class="tile-details"><strong>Tap your square</strong><p>Claim the land beneath your location.</p></div>
+          <div class="tile-actions"><button id="claim-button" class="primary-button" disabled>CLAIM LAND · 25 COINS</button></div>
         </section>
+      </aside>    </main>
 
-        <section class="activity-card">
-          <div class="section-heading"><h2>ACTIVITY</h2><button id="clear-log" class="text-button">CLEAR</button></div>
-          <ul id="activity-log" class="activity-log"><li><span class="activity-dot"></span><span>Your journey begins. Welcome to LandLordy!</span></li></ul>
-        </section>
-      </aside>
-    </main>
-
-    <footer class="footer"><span>LANDLORDY · A MAP-INSPIRED TERRITORY GAME</span><span>PLAY FROM YOUR SCREEN — NO TRAVEL REQUIRED</span></footer>
+    
   </div>
 
   <dialog id="settings-dialog" class="settings-dialog">
