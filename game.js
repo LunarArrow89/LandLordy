@@ -4,11 +4,10 @@
   const SAVE_KEY = "landlordy-save-v1";
   const TILE_COUNT = 48;
   const CLAIM_COST = 25;
-  const BUILD_COST = 40;
-  const $ = (id) => document.getElementById(id);
+    const $ = (id) => document.getElementById(id);
 
   const defaultState = () => ({
-    coins: 120, wood: 3, stone: 2, energy: 5, level: 1, xp: 0,
+    coins: 120,
     tiles: {}, selected: null, mapCenter: "starter"
   });
 
@@ -39,13 +38,7 @@
     const key = tileKey(index);
     const saved = state.tiles[key];
     if (saved) return saved;
-    // Generate resources from the geographic square, not its screen position.
-    let hash = 2166136261;
-    for (let i = 0; i < key.length; i++) hash = Math.imul(hash ^ key.charCodeAt(i), 16777619);
-    hash >>>= 0;
-    const roll = hash % 20;
-    const resource = roll === 0 || roll === 1 ? "wood" : roll === 2 || roll === 3 ? "stone" : null;
-    return { owner: false, built: false, resource };
+    return { owner: false };
   }
 
   function updateVisibleTileKeys() {
@@ -66,12 +59,6 @@
   function render() {
     $("coins").textContent = state.coins;
     $("land-count").textContent = Object.values(state.tiles).filter(t => t.owner).length;
-    $("level").textContent = state.level;
-    $("wood").textContent = state.wood;
-    $("stone").textContent = state.stone;
-    $("energy").textContent = state.energy;
-    $("mission-claim").textContent = Object.values(state.tiles).some(t => t.owner) ? "✓" : "○";
-    $("mission-build").textContent = Object.values(state.tiles).some(t => t.built) ? "✓" : "○";
     renderTiles();
     renderSelected();
     saveState();
@@ -97,17 +84,14 @@
       const button = document.createElement("button");
       button.type = "button";
       button.className = "territory-tile" +
-        (data.owner ? " owned" : "") + (data.built ? " built" : "") +
-        (data.resource && !data.owner ? " resource" : "") +
+        (data.owner ? " owned" : "") +
         (state.selected === i ? " selected" : "");
       button.setAttribute("aria-label", tileDescription(i, data));
       button.title = tileDescription(i, data);
       button.disabled = map ? playerTileIndex !== i : true;
       if (map && playerTileIndex !== i) button.classList.add("out-of-reach");
       if (playerTileIndex === i) button.classList.add("player-here");
-      button.innerHTML = data.built ? '<span class="tile-symbol">⌂</span>' :
-        data.owner ? '<span class="tile-symbol">◆</span>' :
-        data.resource ? '<span class="tile-symbol">' + (data.resource === "wood" ? "♣" : "◈") + '</span>' : "";
+      button.innerHTML = data.owner ? '<span class="tile-symbol">◆</span>' : "";
       button.addEventListener("click", () => {
         if (findPlayerTile() !== i) {
           showToast("You can only interact with the square you're standing in.");
@@ -122,41 +106,30 @@
   }
 
   function tileDescription(index, data) {
-    if (data.built) return "Tile " + (index + 1) + " — your outpost";
     if (data.owner) return "Tile " + (index + 1) + " — claimed by you";
-    if (data.resource) return "Tile " + (index + 1) + " — " + data.resource + " resource";
     return "Tile " + (index + 1) + " — open land";
   }
 
 
   function renderSelected() {
     const claim = $("claim-button");
-    const build = $("build-button");
     if (state.selected === null) {
       $("tile-tag").textContent = "NONE";
       $("tile-details").innerHTML = '<div class="tile-icon">▦</div><div><strong>Pick a tile</strong><p>Select any open square on the map to see what it contains.</p></div>';
-      claim.disabled = true; build.disabled = true;
+      claim.disabled = true;
       return;
     }
     const index = state.selected;
     const data = tileData(index);
     const standingHere = playerTileIndex === index;
-    $("tile-tag").textContent = data.owner ? "YOURS" : data.resource ? "RESOURCE" : "OPEN";
-    const title = data.built ? "Outpost · Tile " + (index + 1) :
-      data.owner ? "Your land · Tile " + (index + 1) :
-      data.resource ? data.resource.toUpperCase() + " deposit · Tile " + (index + 1) :
-      "Open land · Tile " + (index + 1);
-    const desc = data.built ? "Your outpost is established here. It earns you a little experience." :
-      data.owner ? "This tile belongs to your growing territory." :
-      data.resource ? "Claim this tile to collect its " + data.resource + " supply." :
-      "Claim this tile and add it to your territory.";
-    $("tile-details").innerHTML = '<div class="tile-icon">' + (data.built ? "⌂" : data.resource ? (data.resource === "wood" ? "♣" : "◈") : "▦") + '</div><div><strong></strong><p></p></div>';
+    $("tile-tag").textContent = data.owner ? "YOURS" : "OPEN";
+    const title = data.owner ? "Your land · Tile " + (index + 1) : "Open land · Tile " + (index + 1);
+    const desc = data.owner ? "This tile belongs to your territory." : "Claim this square to add it to your land.";
+    $("tile-details").innerHTML = '<div class="tile-icon">▦</div><div><strong></strong><p></p></div>';
     $("tile-details").querySelector("strong").textContent = title;
     $("tile-details").querySelector("p").textContent = desc;
     claim.disabled = !standingHere || data.owner || state.coins < CLAIM_COST;
     claim.textContent = data.owner ? "ALREADY CLAIMED" : "CLAIM TILE · " + CLAIM_COST + " COINS";
-    build.disabled = !standingHere || !data.owner || data.built || state.coins < BUILD_COST || state.wood < 1;
-    build.textContent = data.built ? "OUTPOST BUILT" : "BUILD · " + BUILD_COST + " COINS + 1 WOOD";
   }
 
   function claimSelected() {
@@ -167,39 +140,9 @@
     state.coins -= CLAIM_COST;
     data.owner = true;
     state.tiles[tileKey(i)] = data;
-    if (data.resource === "wood") { state.wood += 2; log("Collected 2 wood from your new tile."); }
-    if (data.resource === "stone") { state.stone += 2; log("Collected 2 stone from your new tile."); }
-    addXp(10);
     log("Claimed tile " + (i + 1) + " for " + CLAIM_COST + " coins.");
     showToast("Tile claimed! Your territory is growing.");
     render();
-  }
-
-  function buildSelected() {
-    const i = state.selected;
-    if (i === null || findPlayerTile() !== i) { showToast("You must be standing on that square to build."); return; }
-    const data = tileData(i);
-    if (!data.owner || data.built || state.coins < BUILD_COST || state.wood < 1) return;
-    state.coins -= BUILD_COST;
-    state.wood -= 1;
-    data.built = true;
-    state.tiles[tileKey(i)] = data;
-    addXp(25);
-    state.coins += 50;
-    log("Built an outpost on tile " + (i + 1) + ". Starter reward: 50 coins.");
-    showToast("Outpost built! +50 coins.");
-    render();
-  }
-
-  function addXp(amount) {
-    state.xp += amount;
-    const needed = state.level * 50;
-    if (state.xp >= needed) {
-      state.xp -= needed;
-      state.level += 1;
-      state.coins += 20;
-      log("Level up! You are now level " + state.level + ". +20 coins.");
-    }
   }
 
   function log(message) {
@@ -352,7 +295,6 @@
 
   $("claim-button").addEventListener("click", claimSelected);
   $("locate-me").addEventListener("click", locatePlayer);
-  $("build-button").addEventListener("click", buildSelected);
   $("menu-button").addEventListener("click", () => $("settings-dialog").showModal());
   $("search-form").addEventListener("submit", (event) => {
     event.preventDefault();
