@@ -8,8 +8,8 @@
   const BUILDINGS = {
     farm:  { name: "Farm",  icon: "🌾", cost: 40, coins: 0, wood: 1, stone: 1, population: 0, description: "+1 wood and +1 stone" },
     store: { name: "Store", icon: "▣",  cost: 60, coins: 4, wood: 0, stone: 0, population: 0, description: "+4 coins" },
-    town:  { name: "Town",  icon: "⌂",  cost: 100, coins: 2, wood: 1, stone: 3, population: 2, description: "+1 wood, +3 stone, +2 population and +2 coins" },
-    city:  { name: "City",  icon: "▦",  cost: 250, coins: 7, wood: 0, stone: 0, population: 5, description: "+5 population and +7 coins" }
+    town:  { name: "Town",  icon: "⌂",  cost: 100, coins: 2, wood: 1, stone: 3, population: 2, description: "+1 wood, +3 stone and +2 population (+20 daily coins)" },
+    city:  { name: "City",  icon: "▦",  cost: 250, coins: 7, wood: 0, stone: 0, population: 5, description: "+5 population (+50 daily coins) and +7 coins" }
   };
     const $ = (id) => document.getElementById(id);
 
