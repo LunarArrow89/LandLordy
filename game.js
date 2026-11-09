@@ -2,7 +2,8 @@
   "use strict";
 
   const SAVE_KEY = "landlordy-save-v1";
-  const TILE_COUNT = 48;
+  const BASE_TILE_ZOOM = 16;
+  const TILE_SIZE = 256;
   const CLAIM_COST = 25;
     const $ = (id) => document.getElementById(id);
 
@@ -30,9 +31,7 @@
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch (_) {}
   }
 
-  function tileKey(index) {
-    return visibleTileKeys[index] || ("unmapped-" + index);
-  }
+  function tileKey(key) { return String(key); }
 
   function tileData(index) {
     const key = tileKey(index);
@@ -43,22 +42,49 @@
 
   function updateVisibleTileKeys() {
     if (!map) return;
-    const size = map.getSize();
+    const zoom = map.getZoom();
+    const cell = TILE_SIZE * Math.pow(2, zoom - BASE_TILE_ZOOM);
+    const bounds = map.getBounds();
+    const nw = map.project(bounds.getNorthWest(), zoom);
+    const se = map.project(bounds.getSouthEast(), zoom);
+    const minX = Math.floor(nw.x / cell), maxX = Math.floor(se.x / cell);
+    const minY = Math.floor(nw.y / cell), maxY = Math.floor(se.y / cell);
+    const layer = $("territory-layer");
+    layer.innerHTML = "";
+    playerTileIndex = findPlayerTile();
     visibleTileKeys = [];
-    for (let row = 0; row < 6; row++) {
-      for (let col = 0; col < 8; col++) {
-        const center = map.containerPointToLatLng([
-          (col + 0.5) * size.x / 8,
-          (row + 0.5) * size.y / 6
-        ]);
-        visibleTileKeys.push(center.lat.toFixed(4) + "," + center.lng.toFixed(4));
-      }
+    for (let y = minY; y <= maxY; y++) for (let x = minX; x <= maxX; x++) {
+      const key = x + ":" + y;
+      visibleTileKeys.push(key);
+      const p1 = map.latLngToContainerPoint(map.unproject(L.point(x * cell, y * cell), zoom));
+      const p2 = map.latLngToContainerPoint(map.unproject(L.point((x + 1) * cell, (y + 1) * cell), zoom));
+      const data = tileData(key);
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "territory-tile" + (data.owner ? " owned" : "") + (state.selected === key ? " selected" : "");
+      button.style.left = p1.x + "px";
+      button.style.top = p1.y + "px";
+      button.style.width = (p2.x - p1.x) + "px";
+      button.style.height = (p2.y - p1.y) + "px";
+      button.disabled = playerTileIndex !== key;
+      button.title = tileDescription(key, data);
+      button.setAttribute("aria-label", button.title);
+      button.innerHTML = data.owner ? '<span class="tile-symbol">◆</span>' : "";
+      button.addEventListener("click", () => {
+        if (findPlayerTile() !== key) return;
+        state.selected = key;
+        setStatus("Land square selected.");
+        render();
+      });
+      layer.appendChild(button);
     }
   }
 
   function render() {
     $("coins").textContent = state.coins;
-    $("land-count").textContent = Object.values(state.tiles).filter(t => t.owner).length;
+    const claimedCount = Object.values(state.tiles).filter(t => t.owner).length;
+    $("land-count").textContent = claimedCount;
+    $("level").textContent = 1 + Math.floor(claimedCount / 5);
     renderTiles();
     renderSelected();
     saveState();
@@ -66,82 +92,51 @@
 
   function findPlayerTile() {
     if (!map || !currentDevicePosition) return null;
-    const point = map.latLngToContainerPoint([currentDevicePosition.lat, currentDevicePosition.lng]);
-    const size = map.getSize();
-    if (point.x < 0 || point.y < 0 || point.x >= size.x || point.y >= size.y) return null;
-    const col = Math.min(7, Math.floor(point.x / (size.x / 8)));
-    const row = Math.min(5, Math.floor(point.y / (size.y / 6)));
-    return row * 8 + col;
+    const zoom = map.getZoom();
+    const cell = TILE_SIZE * Math.pow(2, zoom - BASE_TILE_ZOOM);
+    const point = map.project([currentDevicePosition.lat, currentDevicePosition.lng], zoom);
+    return Math.floor(point.x / cell) + ":" + Math.floor(point.y / cell);
   }
 
   function renderTiles() {
-    const layer = map ? $("territory-layer") : $("fallback-tiles");
     if (map) updateVisibleTileKeys();
-    playerTileIndex = findPlayerTile();
-    layer.innerHTML = "";
-    for (let i = 0; i < TILE_COUNT; i++) {
-      const data = tileData(i);
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "territory-tile" +
-        (data.owner ? " owned" : "") +
-        (state.selected === i ? " selected" : "");
-      button.setAttribute("aria-label", tileDescription(i, data));
-      button.title = tileDescription(i, data);
-      button.disabled = map ? playerTileIndex !== i : true;
-      if (map && playerTileIndex !== i) button.classList.add("out-of-reach");
-      if (playerTileIndex === i) button.classList.add("player-here");
-      button.innerHTML = data.owner ? '<span class="tile-symbol">◆</span>' : "";
-      button.addEventListener("click", () => {
-        if (findPlayerTile() !== i) {
-          showToast("You can only interact with the square you're standing in.");
-          return;
-        }
-        state.selected = i;
-        setStatus("Tile " + (i + 1) + " selected.");
-        render();
-      });
-      layer.appendChild(button);
-    }
   }
 
-  function tileDescription(index, data) {
-    if (data.owner) return "Tile " + (index + 1) + " — claimed by you";
-    return "Tile " + (index + 1) + " — open land";
+  function tileDescription(key, data) {
+    return data.owner ? "Land square " + key + " — claimed by you" : "Land square " + key + " — open land";
   }
-
 
   function renderSelected() {
     const claim = $("claim-button");
     if (state.selected === null) {
       $("tile-tag").textContent = "NONE";
-      $("tile-details").innerHTML = '<div class="tile-icon">▦</div><div><strong>Pick a tile</strong><p>Select any open square on the map to see what it contains.</p></div>';
+      $("tile-details").innerHTML = "<strong>Tap your square</strong><p>Claim the land beneath your location.</p>";
       claim.disabled = true;
       return;
     }
-    const index = state.selected;
-    const data = tileData(index);
-    const standingHere = playerTileIndex === index;
+    const data = tileData(state.selected);
+    const here = playerTileIndex === state.selected;
     $("tile-tag").textContent = data.owner ? "YOURS" : "OPEN";
-    const title = data.owner ? "Your land · Tile " + (index + 1) : "Open land · Tile " + (index + 1);
-    const desc = data.owner ? "This tile belongs to your territory." : "Claim this square to add it to your land.";
-    $("tile-details").innerHTML = '<div class="tile-icon">▦</div><div><strong></strong><p></p></div>';
-    $("tile-details").querySelector("strong").textContent = title;
-    $("tile-details").querySelector("p").textContent = desc;
-    claim.disabled = !standingHere || data.owner || state.coins < CLAIM_COST;
-    claim.textContent = data.owner ? "ALREADY CLAIMED" : "CLAIM TILE · " + CLAIM_COST + " COINS";
+    $("tile-details").innerHTML = "<strong></strong><p></p>";
+    $("tile-details").querySelector("strong").textContent = data.owner ? "Your land" : "Open land";
+    $("tile-details").querySelector("p").textContent = data.owner ? "This square belongs to you." : "Claim this square to add it to your land.";
+    claim.disabled = !here || data.owner || state.coins < CLAIM_COST;
+    claim.textContent = data.owner ? "ALREADY CLAIMED" : "CLAIM LAND · " + CLAIM_COST + " COINS";
   }
 
   function claimSelected() {
-    const i = state.selected;
-    if (i === null || findPlayerTile() !== i) { showToast("You must be standing on that square to claim it."); return; }
-    const data = tileData(i);
+    const key = state.selected;
+    if (key === null || findPlayerTile() !== key) {
+      showToast("You must be standing on that square to claim it.");
+      return;
+    }
+    const data = tileData(key);
     if (data.owner || state.coins < CLAIM_COST) return;
     state.coins -= CLAIM_COST;
     data.owner = true;
-    state.tiles[tileKey(i)] = data;
-    log("Claimed tile " + (i + 1) + " for " + CLAIM_COST + " coins.");
-    showToast("Tile claimed! Your territory is growing.");
+    state.tiles[key] = data;
+    log("Claimed a square of land for " + CLAIM_COST + " coins.");
+    showToast("Land claimed!");
     render();
   }
 
