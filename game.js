@@ -166,6 +166,7 @@
     const preview = $("building-preview");
     const selectedType = select.value;
     const building = BUILDINGS[selectedType];
+    select.disabled = false;
     const data = state.selected === null ? null : tileData(state.selected);
     const claimedCount = Object.values(state.tiles).filter(t => t.owner).length;
     const cityRequirement = selectedType === "city" && claimedCount + (data && data.owner ? 0 : 1) < 4;
