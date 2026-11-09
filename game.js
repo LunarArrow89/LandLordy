@@ -319,9 +319,9 @@
   }
 
   function refreshPlayerTile() {
-    const previous = state.selected;
+    // The visible grid now represents different geographic squares after a pan or zoom.
+    state.selected = null;
     renderTiles();
-    if (previous !== null && previous !== playerTileIndex) state.selected = null;
     renderSelected();
     if (playerTileIndex === null) setStatus("Your location is outside the visible territory grid. Move the map so your location marker is over a square.");
     else setStatus("You are on square " + (playerTileIndex + 1) + ". Only this square can be used.");
