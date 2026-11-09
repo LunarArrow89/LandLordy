@@ -4,19 +4,18 @@
   const SAVE_KEY = "landlordy-save-v1";
   const BASE_TILE_ZOOM = 16;
   const TILE_SIZE = 16;
-  const LAND_COST = 25;
   const PRODUCTION_INTERVAL = 5 * 60 * 1000;
   const BUILDINGS = {
-    farm:  { name: "Farm",  icon: "🌾", cost: 15, coins: 3,  food: 2, goods: 0, materials: 0, population: 0, description: "+2 food and +3 coins" },
-    store: { name: "Store", icon: "▣",  cost: 35, coins: 6,  food: 0, goods: 1, materials: 0, population: 0, description: "+1 goods and +6 coins" },
-    town:  { name: "Town",  icon: "⌂",  cost: 75, coins: 8,  food: 2, goods: 0, materials: 0, population: 2, description: "+2 food, +2 population and +8 coins" },
-    city:  { name: "City",  icon: "▦",  cost: 225,coins: 20, food: 0, goods: 3, materials: 2, population: 5, description: "+3 goods, +2 materials, +5 population and +20 coins" }
+    farm:  { name: "Farm",  icon: "🌾", cost: 40, coins: 0, wood: 1, stone: 1, population: 0, description: "+1 wood and +1 stone" },
+    store: { name: "Store", icon: "▣",  cost: 60, coins: 4, wood: 0, stone: 0, population: 0, description: "+4 coins" },
+    town:  { name: "Town",  icon: "⌂",  cost: 100, coins: 2, wood: 1, stone: 3, population: 2, description: "+1 wood, +3 stone, +2 population and +2 coins" },
+    city:  { name: "City",  icon: "▦",  cost: 250, coins: 7, wood: 0, stone: 0, population: 5, description: "+5 population and +7 coins" }
   };
     const $ = (id) => document.getElementById(id);
 
   const defaultState = () => ({
     coins: 120,
-    resources: { food: 0, goods: 0, materials: 0, population: 0 },
+    resources: { wood: 0, stone: 0, population: 0 },
     lastProductionAt: Date.now(),
     tiles: {}, selected: null, mapCenter: "starter"
   });
@@ -34,7 +33,12 @@
       const saved = JSON.parse(localStorage.getItem(SAVE_KEY));
       if (!saved || typeof saved !== "object") return defaultState();
       const merged = { ...defaultState(), ...saved };
-      merged.resources = { ...defaultState().resources, ...(saved.resources || {}) };
+      const oldResources = saved.resources || {};
+      merged.resources = {
+        wood: Number(oldResources.wood ?? oldResources.goods ?? 0),
+        stone: Number(oldResources.stone ?? oldResources.materials ?? 0),
+        population: Number(oldResources.population || 0)
+      };
       if (!Number.isFinite(merged.lastProductionAt)) merged.lastProductionAt = Date.now();
       if (!merged.tiles || typeof merged.tiles !== "object") merged.tiles = {};
       return merged;
@@ -122,7 +126,7 @@
   }
 
   function getBuildingRates() {
-    const rates = { coins: 0, food: 0, goods: 0, materials: 0, population: 0 };
+    const rates = { coins: 0, wood: 0, stone: 0, population: 0 };
     Object.values(state.tiles).forEach(tile => {
       if (!tile.owner || !tile.building || !BUILDINGS[tile.building]) return;
       Object.keys(rates).forEach(resource => rates[resource] += BUILDINGS[tile.building][resource] || 0);
@@ -132,7 +136,7 @@
 
   function renderResources() {
     const rates = getBuildingRates();
-    ["food", "goods", "materials", "population"].forEach(resource => {
+    ["wood", "stone", "population"].forEach(resource => {
       $("resource-" + resource).textContent = Math.floor(state.resources[resource] || 0);
       $("rate-" + resource).textContent = "+" + rates[resource] + " / 5m";
     });
@@ -141,7 +145,7 @@
     const remaining = Math.max(0, PRODUCTION_INTERVAL - elapsed);
     const minutes = Math.floor(remaining / 60000);
     const seconds = Math.floor((remaining % 60000) / 1000);
-    $("production-timer").textContent = rates.coins || rates.food || rates.goods || rates.materials || rates.population
+    $("production-timer").textContent = rates.coins || rates.wood || rates.stone || rates.population
       ? "Next production in " + minutes + "m " + seconds + "s"
       : "Build something to start producing resources.";
   }
@@ -193,8 +197,8 @@
       return;
     }
     select.disabled = false;
-    const totalCost = building.cost + (data.owner ? 0 : LAND_COST);
-    claim.textContent = (data.owner ? "BUILD " : "BUY + BUILD · ") + totalCost + " COINS";
+    const totalCost = building.cost;
+    claim.textContent = (data.owner ? "BUILD · " : "BUY + BUILD · ") + totalCost + " COINS";
     claim.disabled = !here || state.coins < totalCost || cityRequirement;
     if (cityRequirement) preview.textContent += " City needs 4 claimed squares (including this purchase).";
   }
@@ -213,10 +217,10 @@
     const claimedCount = Object.values(state.tiles).filter(t => t.owner).length;
     const cityWouldHave = claimedCount + (data.owner ? 0 : 1);
     if (type === "city" && cityWouldHave < 4) {
-      showToast("A city needs 4 claimed land squares first.");
+      showToast("A city requires 4 claimed land squares, including this one.");
       return;
     }
-    const totalCost = building.cost + (data.owner ? 0 : LAND_COST);
+    const totalCost = building.cost;
     if (state.coins < totalCost) {
       showToast("You need " + totalCost + " coins for this.");
       return;
