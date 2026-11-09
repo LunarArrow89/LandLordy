@@ -17,6 +17,7 @@
     coins: 120,
     resources: { wood: 0, stone: 0, population: 0 },
     lastProductionAt: Date.now(),
+    lastDailyPayoutAt: Date.now(),
     tiles: {}, selected: null, mapCenter: "starter"
   });
 
@@ -40,6 +41,7 @@
         population: Number(oldResources.population || 0)
       };
       if (!Number.isFinite(merged.lastProductionAt)) merged.lastProductionAt = Date.now();
+      if (!Number.isFinite(merged.lastDailyPayoutAt)) merged.lastDailyPayoutAt = Date.now();
       if (!merged.tiles || typeof merged.tiles !== "object") merged.tiles = {};
       return merged;
     } catch (_) { return defaultState(); }
@@ -141,6 +143,11 @@
       $("rate-" + resource).textContent = "+" + rates[resource] + " / 5m";
     });
     $("coin-income").textContent = "+" + rates.coins + " coins / 5 min";
+    $("daily-population-bonus").textContent = "+" + (Math.floor(state.resources.population || 0) * 10) + " coins / day";
+    const dailyRemaining = Math.max(0, 24 * 60 * 60 * 1000 - (Date.now() - state.lastDailyPayoutAt));
+    const dailyHours = Math.floor(dailyRemaining / 3600000);
+    const dailyMinutes = Math.floor((dailyRemaining % 3600000) / 60000);
+    $("daily-payout-timer").textContent = "Next population payout in " + dailyHours + "h " + dailyMinutes + "m";
     const elapsed = Date.now() - state.lastProductionAt;
     const remaining = Math.max(0, PRODUCTION_INTERVAL - elapsed);
     const minutes = Math.floor(remaining / 60000);
@@ -154,13 +161,22 @@
     const now = Date.now();
     if (!Number.isFinite(state.lastProductionAt)) state.lastProductionAt = now;
     const cycles = Math.floor((now - state.lastProductionAt) / PRODUCTION_INTERVAL);
-    if (cycles <= 0) return false;
+    const dailyCycles = Math.floor((now - state.lastDailyPayoutAt) / (24 * 60 * 60 * 1000));
+    if (cycles <= 0 && dailyCycles <= 0) return false;
     const rates = getBuildingRates();
-    Object.keys(state.resources).forEach(resource => {
-      state.resources[resource] += (rates[resource] || 0) * cycles;
-    });
-    state.coins += rates.coins * cycles;
-    state.lastProductionAt += cycles * PRODUCTION_INTERVAL;
+    if (cycles > 0) {
+      Object.keys(state.resources).forEach(resource => {
+        state.resources[resource] += (rates[resource] || 0) * cycles;
+      });
+      state.coins += rates.coins * cycles;
+      state.lastProductionAt += cycles * PRODUCTION_INTERVAL;
+    }
+
+    // Once every 24 hours, award 10 coins for each population point.
+    if (dailyCycles > 0) {
+      state.coins += Math.floor(state.resources.population || 0) * 10 * dailyCycles;
+      state.lastDailyPayoutAt += dailyCycles * 24 * 60 * 60 * 1000;
+    }
     return true;
   }
 
