@@ -4,11 +4,20 @@
   const SAVE_KEY = "landlordy-save-v1";
   const BASE_TILE_ZOOM = 16;
   const TILE_SIZE = 16;
-  const CLAIM_COST = 25;
+  const LAND_COST = 25;
+  const PRODUCTION_INTERVAL = 5 * 60 * 1000;
+  const BUILDINGS = {
+    farm:  { name: "Farm",  icon: "🌾", cost: 15, coins: 3,  food: 2, goods: 0, materials: 0, population: 0, description: "+2 food and +3 coins" },
+    store: { name: "Store", icon: "▣",  cost: 35, coins: 6,  food: 0, goods: 1, materials: 0, population: 0, description: "+1 goods and +6 coins" },
+    town:  { name: "Town",  icon: "⌂",  cost: 75, coins: 8,  food: 2, goods: 0, materials: 0, population: 2, description: "+2 food, +2 population and +8 coins" },
+    city:  { name: "City",  icon: "▦",  cost: 225,coins: 20, food: 0, goods: 3, materials: 2, population: 5, description: "+3 goods, +2 materials, +5 population and +20 coins" }
+  };
     const $ = (id) => document.getElementById(id);
 
   const defaultState = () => ({
     coins: 120,
+    resources: { food: 0, goods: 0, materials: 0, population: 0 },
+    lastProductionAt: Date.now(),
     tiles: {}, selected: null, mapCenter: "starter"
   });
 
@@ -23,7 +32,12 @@
   function loadState() {
     try {
       const saved = JSON.parse(localStorage.getItem(SAVE_KEY));
-      return saved && typeof saved === "object" ? { ...defaultState(), ...saved } : defaultState();
+      if (!saved || typeof saved !== "object") return defaultState();
+      const merged = { ...defaultState(), ...saved };
+      merged.resources = { ...defaultState().resources, ...(saved.resources || {}) };
+      if (!Number.isFinite(merged.lastProductionAt)) merged.lastProductionAt = Date.now();
+      if (!merged.tiles || typeof merged.tiles !== "object") merged.tiles = {};
+      return merged;
     } catch (_) { return defaultState(); }
   }
 
@@ -61,7 +75,7 @@
       const data = tileData(key);
       const button = document.createElement("button");
       button.type = "button";
-      button.className = "territory-tile" + (data.owner ? " owned" : "") + (state.selected === key ? " selected" : "");
+      button.className = "territory-tile" + (data.owner ? " owned" : "") + (data.building ? " built" : "") + (state.selected === key ? " selected" : "");
       button.style.left = p1.x + "px";
       button.style.top = p1.y + "px";
       button.style.width = (p2.x - p1.x) + "px";
@@ -69,7 +83,7 @@
       button.disabled = playerTileIndex !== key;
       button.title = tileDescription(key, data);
       button.setAttribute("aria-label", button.title);
-      button.innerHTML = data.owner ? '<span class="tile-symbol">◆</span>' : "";
+      button.innerHTML = data.owner ? '<span class="tile-symbol">' + (data.building ? BUILDINGS[data.building].icon : "◆") + '</span>' : "";
       button.addEventListener("click", () => {
         if (findPlayerTile() !== key) return;
         state.selected = key;
@@ -84,6 +98,7 @@
     $("coins").textContent = state.coins;
     const claimedCount = Object.values(state.tiles).filter(t => t.owner).length;
     $("level").textContent = 1 + Math.floor(claimedCount / 5);
+    renderResources();
     renderTiles();
     renderSelected();
     saveState();
@@ -102,40 +117,115 @@
   }
 
   function tileDescription(key, data) {
-    return data.owner ? "Land square " + key + " — claimed by you" : "Land square " + key + " — open land";
+    if (!data.owner) return "Land square " + key + " — open land";
+    return "Land square " + key + " — " + (data.building ? BUILDINGS[data.building].name : "claimed land");
+  }
+
+  function getBuildingRates() {
+    const rates = { coins: 0, food: 0, goods: 0, materials: 0, population: 0 };
+    Object.values(state.tiles).forEach(tile => {
+      if (!tile.owner || !tile.building || !BUILDINGS[tile.building]) return;
+      Object.keys(rates).forEach(resource => rates[resource] += BUILDINGS[tile.building][resource] || 0);
+    });
+    return rates;
+  }
+
+  function renderResources() {
+    const rates = getBuildingRates();
+    ["food", "goods", "materials", "population"].forEach(resource => {
+      $("resource-" + resource).textContent = Math.floor(state.resources[resource] || 0);
+      $("rate-" + resource).textContent = "+" + rates[resource] + " / 5m";
+    });
+    $("coin-income").textContent = "+" + rates.coins + " coins / 5 min";
+    const elapsed = Date.now() - state.lastProductionAt;
+    const remaining = Math.max(0, PRODUCTION_INTERVAL - elapsed);
+    const minutes = Math.floor(remaining / 60000);
+    const seconds = Math.floor((remaining % 60000) / 1000);
+    $("production-timer").textContent = rates.coins || rates.food || rates.goods || rates.materials || rates.population
+      ? "Next production in " + minutes + "m " + seconds + "s"
+      : "Build something to start producing resources.";
+  }
+
+  function processProduction() {
+    const now = Date.now();
+    if (!Number.isFinite(state.lastProductionAt)) state.lastProductionAt = now;
+    const cycles = Math.floor((now - state.lastProductionAt) / PRODUCTION_INTERVAL);
+    if (cycles <= 0) return false;
+    const rates = getBuildingRates();
+    Object.keys(state.resources).forEach(resource => {
+      state.resources[resource] += (rates[resource] || 0) * cycles;
+    });
+    state.coins += rates.coins * cycles;
+    state.lastProductionAt += cycles * PRODUCTION_INTERVAL;
+    return true;
   }
 
   function renderSelected() {
     const claim = $("claim-button");
+    const select = $("building-select");
+    const preview = $("building-preview");
+    const selectedType = select.value;
+    const building = BUILDINGS[selectedType];
+    const data = state.selected === null ? null : tileData(state.selected);
+    const claimedCount = Object.values(state.tiles).filter(t => t.owner).length;
+    const cityRequirement = selectedType === "city" && claimedCount + (data && data.owner ? 0 : 1) < 4;
+    preview.textContent = building.name + " · " + building.cost + " build coins · " + building.description + " every 5 min.";
     if (state.selected === null) {
       $("tile-tag").textContent = "NONE";
-      $("tile-details").innerHTML = "<strong>Tap your square</strong><p>Claim the land beneath your location.</p>";
+      $("tile-details").innerHTML = "<strong>Tap your square</strong><p>Choose a building, then buy the land beneath your location.</p>";
       claim.disabled = true;
+      claim.textContent = "BUY LAND";
       return;
     }
-    const data = tileData(state.selected);
     const here = playerTileIndex === state.selected;
     $("tile-tag").textContent = data.owner ? "YOURS" : "OPEN";
     $("tile-details").innerHTML = "<strong></strong><p></p>";
-    $("tile-details").querySelector("strong").textContent = data.owner ? "Your land" : "Open land";
-    $("tile-details").querySelector("p").textContent = data.owner ? "This square belongs to you." : "Claim this square to add it to your land.";
-    claim.disabled = !here || data.owner || state.coins < CLAIM_COST;
-    claim.textContent = data.owner ? "ALREADY CLAIMED" : "CLAIM LAND · " + CLAIM_COST + " COINS";
+    $("tile-details").querySelector("strong").textContent = data.building ? BUILDINGS[data.building].name : (data.owner ? "Your land" : "Open land");
+    $("tile-details").querySelector("p").textContent = data.building
+      ? "This building is producing resources every 5 minutes."
+      : (data.owner ? "You own this square. Choose a building for it." : "Buy this square and choose its building.");
+    if (data.building) {
+      claim.disabled = true;
+      claim.textContent = "ALREADY BUILT";
+      select.disabled = true;
+      preview.textContent = BUILDINGS[data.building].name + " is built here.";
+      return;
+    }
+    select.disabled = false;
+    const totalCost = building.cost + (data.owner ? 0 : LAND_COST);
+    claim.textContent = (data.owner ? "BUILD " : "BUY + BUILD · ") + totalCost + " COINS";
+    claim.disabled = !here || state.coins < totalCost || cityRequirement;
+    if (cityRequirement) preview.textContent += " City needs 4 claimed squares (including this purchase).";
   }
 
-  function claimSelected() {
+  function purchaseSelected() {
     const key = state.selected;
     if (key === null || findPlayerTile() !== key) {
-      showToast("You must be standing on that square to claim it.");
+      showToast("You must be standing on that square to buy or build there.");
       return;
     }
     const data = tileData(key);
-    if (data.owner || state.coins < CLAIM_COST) return;
-    state.coins -= CLAIM_COST;
+    if (data.building) return;
+    const type = $("building-select").value;
+    const building = BUILDINGS[type];
+    if (!building) return;
+    const claimedCount = Object.values(state.tiles).filter(t => t.owner).length;
+    const cityWouldHave = claimedCount + (data.owner ? 0 : 1);
+    if (type === "city" && cityWouldHave < 4) {
+      showToast("A city needs 4 claimed land squares first.");
+      return;
+    }
+    const totalCost = building.cost + (data.owner ? 0 : LAND_COST);
+    if (state.coins < totalCost) {
+      showToast("You need " + totalCost + " coins for this.");
+      return;
+    }
+    state.coins -= totalCost;
     data.owner = true;
+    data.building = type;
     state.tiles[key] = data;
-    log("Claimed a square of land for " + CLAIM_COST + " coins.");
-    showToast("Land claimed!");
+    log("Built a " + building.name + " for " + totalCost + " coins.");
+    showToast(building.name + " built! It produces every 5 minutes.");
     render();
   }
 
@@ -303,7 +393,8 @@
     }
   }
 
-  $("claim-button").addEventListener("click", claimSelected);
+  $("claim-button").addEventListener("click", purchaseSelected);
+  $("building-select").addEventListener("change", renderSelected);
   $("locate-me").addEventListener("click", locatePlayer);
   $("menu-button").addEventListener("click", () => $("settings-dialog").showModal());
   $("search-form").addEventListener("submit", (event) => {
@@ -330,8 +421,17 @@
     showToast("Game progress reset.");
   });
 
+  processProduction();
   render();
   useDemoMap();
+  setInterval(() => {
+    if (processProduction()) {
+      render();
+      showToast("Your buildings produced resources!");
+    } else {
+      renderResources();
+    }
+  }, 1000);
 
   // On refresh, automatically recenter only if location permission was
   // already granted. If permission is still undecided, wait for a button click
