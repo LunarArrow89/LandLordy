@@ -48,3 +48,14 @@ button,input{font:inherit}button{cursor:pointer;color:inherit}
 @media(max-width:560px){.app-shell{padding:0 12px}.topbar{height:64px}.brand{font-size:13px;gap:8px}.brand-mark{width:30px;height:30px}.top-stats{gap:13px;margin-right:5px}.stat-label{font-size:8px}.stat strong{font-size:14px}.main-layout{padding:12px 0;gap:12px}.map-toolbar{height:auto;flex-wrap:wrap}.search-form{max-width:none;height:38px;flex-basis:100%}.map-actions{height:34px}.map{min-height:390px;height:58vh}.territory-layer{padding:7%;gap:3px}.territory-tile{font-size:15px}.side-panel{gap:8px}.side-panel section{padding:12px}.welcome-card h1{font-size:27px}.tile-actions{grid-template-columns:1fr}.footer{font-size:8px;gap:12px;line-height:1.5}.footer span:last-child{text-align:right}.map-footer{font-size:8px;gap:8px}}
 
 #map .leaflet-container{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}#map .leaflet-control-attribution{font-size:9px}.territory-layer{pointer-events:none}.territory-tile{pointer-events:auto}
+
+/* Google Maps key controls and highly visible location action */
+.location-button{background:var(--green)!important;color:#17251a!important;border:2px solid #d4f4b8!important;font-weight:1000!important;min-height:38px;box-shadow:0 0 0 2px #527d43;white-space:nowrap}
+.location-button:hover{background:#c0f09a!important}
+.location-button:disabled{opacity:.65;cursor:wait}
+.settings-key-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.settings-key-actions button{min-height:42px}
+#google-maps-key{width:100%;height:42px;background:#101a24;border:1px solid var(--line);color:var(--text);padding:0 12px;font:inherit}
+#google-maps-key:focus{outline:2px solid var(--green);outline-offset:1px}
+#map .gm-style{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+@media(max-width:560px){.map-actions{width:100%;display:grid;grid-template-columns:1fr 1fr 1.7fr 1fr}.map-actions .tool-button{padding:0 6px;font-size:10px}.location-button{min-width:0}.settings-key-actions{grid-template-columns:1fr}}
