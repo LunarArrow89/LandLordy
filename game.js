@@ -304,10 +304,6 @@
     showToast("Game progress reset.");
   });
 
-  useDemoMap();
   render();
-  try {
-    const savedKey = localStorage.getItem("landlordy-maps-key");
-    if (savedKey) $("api-key").value = savedKey;
-  } catch (_) {}
+  useDemoMap();
 })();
