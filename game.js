@@ -221,6 +221,8 @@
       return;
     }
     state.coins -= totalCost;
+    // Start a fresh five-minute production cycle when a new building is placed.
+    state.lastProductionAt = Date.now();
     data.owner = true;
     data.building = type;
     state.tiles[key] = data;
