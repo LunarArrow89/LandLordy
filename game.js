@@ -78,11 +78,10 @@
   function tileDescription(index, data) {
     if (data.built) return "Tile " + (index + 1) + " — your outpost";
     if (data.owner) return "Tile " + (index + 1) + " — claimed by you";
-    if (data.resource) return "Tile " + (index + 1) + " — " + data.resource resourceLabel();
+    if (data.resource) return "Tile " + (index + 1) + " — " + data.resource + " resource";
     return "Tile " + (index + 1) + " — open land";
   }
 
-  function resourceLabel() { return "resource"; }
 
   function renderSelected() {
     const claim = $("claim-button");
