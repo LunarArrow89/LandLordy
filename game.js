@@ -201,35 +201,42 @@
 
   function locatePlayer() {
     if (!navigator.geolocation) {
+      setStatus("This browser does not support location. Try a browser with location enabled.");
       showToast("Location is not available in this browser.");
       return;
     }
-    $("locate-me").disabled = true;
-    $("locate-me").textContent = "REQUESTING…";
-    setStatus("Waiting for your location permission…");
+
+    const button = $("locate-me");
+    button.disabled = true;
+    button.textContent = "FINDING YOU…";
+    setStatus("Getting your current location…");
+
     navigator.geolocation.getCurrentPosition(
       (position) => {
         currentDevicePosition = {
           lat: position.coords.latitude,
           lng: position.coords.longitude
         };
-        $("locate-me").disabled = false;
-        $("locate-me").textContent = "⌖ MY LOCATION";
+        button.disabled = false;
+        button.textContent = "⌖ MY LOCATION";
         showPlayerOnMap(currentDevicePosition);
         refreshPlayerTile();
-        setStatus("You can only interact with the square containing your location.");
-        showToast("Your location is on the map.");
+        setStatus("Map centered on your current location.");
+        showToast("Location found!");
       },
       (error) => {
-        $("locate-me").disabled = false;
-        $("locate-me").textContent = "⌖ MY LOCATION";
-        const message = error.code === 1 ? "Location permission was denied." :
-          error.code === 2 ? "Your location could not be determined." :
-          "Location request timed out. Try again.";
-        setStatus(message + " You can still play without location.");
+        button.disabled = false;
+        button.textContent = "⌖ MY LOCATION";
+        let message = "Couldn't get your location. Check that device location is turned on and try again.";
+        if (error.code === 1) {
+          message = "Location permission is blocked. Allow location for this site in your browser's site settings, then try again.";
+        } else if (error.code === 3) {
+          message = "Location took too long. Check your connection and device location, then try again.";
+        }
+        setStatus(message);
         showToast(message);
       },
-      { enableHighAccuracy: false, timeout: 12000, maximumAge: 60000 }
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
     );
   }
 
@@ -317,7 +324,12 @@
   render();
   useDemoMap();
 
-  // Ask for location on every page load. The browser remembers the user's
-  // permission choice, and a permitted location recenters the map automatically.
-  setTimeout(locatePlayer, 300);
+  // On refresh, automatically recenter only if location permission was
+  // already granted. If permission is still undecided, wait for a button click
+  // so the browser can show its permission prompt from a user action.
+  if (navigator.permissions && navigator.permissions.query) {
+    navigator.permissions.query({ name: "geolocation" }).then((permission) => {
+      if (permission.state === "granted") locatePlayer();
+    }).catch(() => {});
+  }
 })();
