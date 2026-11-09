@@ -83,7 +83,6 @@
   function render() {
     $("coins").textContent = state.coins;
     const claimedCount = Object.values(state.tiles).filter(t => t.owner).length;
-    $("land-count").textContent = claimedCount;
     $("level").textContent = 1 + Math.floor(claimedCount / 5);
     renderTiles();
     renderSelected();
