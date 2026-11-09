@@ -276,7 +276,13 @@
   function showPlayerOnMap(position) {
     if (!map || !window.L) return;
     const point = [position.lat, position.lng];
-    map.setView(point, 16);
+
+    // Smoothly move the map camera so the player's location is centered.
+    map.flyTo(point, 17, {
+      animate: true,
+      duration: 1.2
+    });
+
     if (playerLocationMarker) playerLocationMarker.remove();
     playerLocationMarker = L.circleMarker(point, {
       radius: 8,
@@ -287,7 +293,7 @@
     }).addTo(map);
     playerLocationMarker.bindTooltip("Your current location");
     $("map-location").textContent = "YOUR CURRENT AREA";
-    refreshPlayerTile();
+    setStatus("Moving the map to your location…");
   }
 
   function refreshPlayerTile() {
