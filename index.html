@@ -59,7 +59,26 @@
         <section class="action-card">
           <div class="section-heading"><h2>LAND SQUARE</h2><span id="tile-tag" class="tag">NONE</span></div>
           <div id="tile-details" class="tile-details"><strong>Tap your square</strong><p>Claim the land beneath your location.</p></div>
-          <div class="tile-actions"><button id="claim-button" class="primary-button" disabled>CLAIM LAND · 25 COINS</button></div>
+          <label class="building-label" for="building-select">CHOOSE WHAT TO BUILD</label>
+          <select id="building-select" class="building-select">
+            <option value="farm">Farm</option>
+            <option value="store">Store</option>
+            <option value="town">Town</option>
+            <option value="city">City (4 claimed squares)</option>
+          </select>
+          <p id="building-preview" class="building-preview">Farm · 15 build coins · +2 food and +3 coins every 5 min.</p>
+          <div class="tile-actions"><button id="claim-button" class="primary-button" disabled>BUY LAND</button></div>
+        </section>
+        <section class="resource-card">
+          <div class="section-heading"><h2>YOUR RESOURCES</h2><span class="tag">EVERY 5 MIN</span></div>
+          <div class="resource-grid">
+            <div><span>FOOD</span><strong id="resource-food">0</strong><small id="rate-food">+0</small></div>
+            <div><span>GOODS</span><strong id="resource-goods">0</strong><small id="rate-goods">+0</small></div>
+            <div><span>MATERIALS</span><strong id="resource-materials">0</strong><small id="rate-materials">+0</small></div>
+            <div><span>POPULATION</span><strong id="resource-population">0</strong><small id="rate-population">+0</small></div>
+          </div>
+          <p class="income-line">COIN INCOME <strong id="coin-income">+0 coins / 5 min</strong></p>
+          <p id="production-timer" class="production-timer">Production starts after 5 minutes.</p>
         </section>
       </aside>    </main>
 
