@@ -102,18 +102,13 @@
   <dialog id="settings-dialog" class="settings-dialog">
     <form method="dialog" class="dialog-top"><h2>GAME SETTINGS</h2><button class="icon-button" aria-label="Close settings">×</button></form>
     <div class="settings-content">
-      <p class="setting-help">Paste your Google Maps JavaScript API key below. It is saved only in this browser and is not included in the game files. Enable the Maps JavaScript API in your Google Cloud project.</p>
-      <label for="google-maps-key">GOOGLE MAPS API KEY</label>
-      <input id="google-maps-key" type="password" autocomplete="off" placeholder="Paste your API key here">
-      <div class="settings-key-actions"><button id="save-map-key" class="primary-button" type="button">SAVE & LOAD GOOGLE MAPS</button><button id="clear-map-key" class="secondary-button" type="button">CLEAR KEY</button></div>
-      <p class="setting-help">Restrict the key in Google Cloud Console to your website address and the Maps JavaScript API. Google may require a billing account.</p>
-      <div class="settings-divider"></div>
-      <p class="setting-help">Press MY LOCATION to ask your browser for permission to center the map on you. Your location is used only in this tab and is not saved to your game.</p>
+      <p class="setting-help">LandLordy uses OpenStreetMap for free map data. No Google Maps account, API key, or credit card is needed. Press MY LOCATION to ask your browser for permission to center the map on you.</p>
       <div class="settings-divider"></div>
       <button id="reset-game" class="danger-button">RESET GAME PROGRESS</button>
     </div>
   </dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script src="game.js"></script>
 </body>
 </html>
