@@ -289,10 +289,12 @@
     map = L.map("map", {
       zoomControl: false,
       attributionControl: true,
-      scrollWheelZoom: true
-    }).setView([34.0522, -118.2437], 14);
+      scrollWheelZoom: true,
+      minZoom: 15
+    }).setView([34.0522, -118.2437], 15);
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      minZoom: 15,
       maxZoom: 19,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'
     }).addTo(map);
@@ -307,6 +309,7 @@
     map.on("moveend zoomend", () => {
       const locationLabel = $("map-location");
       if (locationLabel) locationLabel.textContent = "OPENSTREETMAP · ZOOM " + map.getZoom();
+      $("zoom-out").disabled = map.getZoom() <= map.getMinZoom();
       refreshPlayerTile();
     });
     map.on("resize", refreshPlayerTile);
