@@ -15,7 +15,9 @@
   let state = loadState();
   let map = null;
   let mapScriptLoading = false;
-  let toastTimer = null;\n  let currentDevicePosition = null;\n  let playerLocationMarker = null;
+  let toastTimer = null;
+  let currentDevicePosition = null;
+  let playerLocationMarker = null;
 
   function loadState() {
     try {
@@ -220,7 +222,8 @@
       clickableIcons: false,
       gestureHandling: "greedy"
     });
-    if (currentDevicePosition) showPlayerOnMap(currentDevicePosition);\n    map.addListener("idle", () => {
+    if (currentDevicePosition) showPlayerOnMap(currentDevicePosition);
+    map.addListener("idle", () => {
       // The generated game grid is deliberately an abstract overlay, not a claim on real property.
       $("map-location").textContent = "GENERATED MAP DISTRICT · ZOOM " + map.getZoom();
       renderTiles();
@@ -230,7 +233,68 @@
     render();
   }
 
-  function locatePlayer() {\n    if (!navigator.geolocation) {\n      showToast("Location is not available in this browser.");\n      return;\n    }\n    $("locate-me").disabled = true;\n    $("locate-me").textContent = "REQUESTING…";\n    setStatus("Waiting for your location permission…");\n    navigator.geolocation.getCurrentPosition(\n      (position) => {\n        currentDevicePosition = {\n          lat: position.coords.latitude,\n          lng: position.coords.longitude\n        };\n        $("locate-me").disabled = false;\n        $("locate-me").textContent = "⌖ MY LOCATION";\n        if (map) {\n          showPlayerOnMap(currentDevicePosition);\n          setStatus("Map centered on your current location. Location is only used in this tab.");\n          showToast("Your location is on the map.");\n        } else {\n          setStatus("Location permission granted. Connect Google Maps in settings to show your location on a real map.");\n          showToast("Location received. Connect Google Maps to display it.");\n        }\n      },\n      (error) => {\n        $("locate-me").disabled = false;\n        $("locate-me").textContent = "⌖ MY LOCATION";\n        const message = error.code === 1 ? "Location permission was denied." :\n          error.code === 2 ? "Your location could not be determined." :\n          "Location request timed out. Try again.";\n        setStatus(message + " You can still play without location.");\n        showToast(message);\n      },\n      { enableHighAccuracy: false, timeout: 12000, maximumAge: 60000 }\n    );\n  }\n\n  function showPlayerOnMap(position) {\n    if (!map || !window.google || !window.google.maps) return;\n    const point = { lat: position.lat, lng: position.lng };\n    map.panTo(point);\n    map.setZoom(16);\n    if (playerLocationMarker) playerLocationMarker.setMap(null);\n    playerLocationMarker = new google.maps.Marker({\n      position: point,\n      map,\n      title: "Your current location",\n      clickable: false,\n      icon: {\n        path: google.maps.SymbolPath.CIRCLE,\n        scale: 8,\n        fillColor: "#4285f4",\n        fillOpacity: 1,\n        strokeColor: "#ffffff",\n        strokeWeight: 3\n      }\n    });\n    $("map-location").textContent = "YOUR CURRENT AREA";\n  }\n\n  function searchPlace(query) {
+  function locatePlayer() {
+    if (!navigator.geolocation) {
+      showToast("Location is not available in this browser.");
+      return;
+    }
+    $("locate-me").disabled = true;
+    $("locate-me").textContent = "REQUESTING…";
+    setStatus("Waiting for your location permission…");
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        currentDevicePosition = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        };
+        $("locate-me").disabled = false;
+        $("locate-me").textContent = "⌖ MY LOCATION";
+        if (map) {
+          showPlayerOnMap(currentDevicePosition);
+          setStatus("Map centered on your current location. Location is only used in this tab.");
+          showToast("Your location is on the map.");
+        } else {
+          setStatus("Location permission granted. Connect Google Maps in settings to show your location on a real map.");
+          showToast("Location received. Connect Google Maps to display it.");
+        }
+      },
+      (error) => {
+        $("locate-me").disabled = false;
+        $("locate-me").textContent = "⌖ MY LOCATION";
+        const message = error.code === 1 ? "Location permission was denied." :
+          error.code === 2 ? "Your location could not be determined." :
+          "Location request timed out. Try again.";
+        setStatus(message + " You can still play without location.");
+        showToast(message);
+      },
+      { enableHighAccuracy: false, timeout: 12000, maximumAge: 60000 }
+    );
+  }
+
+  function showPlayerOnMap(position) {
+    if (!map || !window.google || !window.google.maps) return;
+    const point = { lat: position.lat, lng: position.lng };
+    map.panTo(point);
+    map.setZoom(16);
+    if (playerLocationMarker) playerLocationMarker.setMap(null);
+    playerLocationMarker = new google.maps.Marker({
+      position: point,
+      map,
+      title: "Your current location",
+      clickable: false,
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 8,
+        fillColor: "#4285f4",
+        fillOpacity: 1,
+        strokeColor: "#ffffff",
+        strokeWeight: 3
+      }
+    });
+    $("map-location").textContent = "YOUR CURRENT AREA";
+  }
+
+  function searchPlace(query) {
     if (!query.trim()) return;
     if (!map) {
       $("map-location").textContent = "SEARCH: " + query.trim().toUpperCase();
@@ -251,7 +315,8 @@
     });
   }
 
-  $("claim-button").addEventListener("click", claimSelected);\n  $("locate-me").addEventListener("click", locatePlayer);
+  $("claim-button").addEventListener("click", claimSelected);
+  $("locate-me").addEventListener("click", locatePlayer);
   $("build-button").addEventListener("click", buildSelected);
   $("menu-button").addEventListener("click", () => $("settings-dialog").showModal());
   $("search-form").addEventListener("submit", (event) => {
