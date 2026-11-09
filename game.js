@@ -316,4 +316,8 @@
 
   render();
   useDemoMap();
+
+  // Ask for location on every page load. The browser remembers the user's
+  // permission choice, and a permitted location recenters the map automatically.
+  setTimeout(locatePlayer, 300);
 })();
