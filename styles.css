@@ -28,6 +28,9 @@ button,input{font:inherit}button{cursor:pointer;color:inherit}
 .territory-tile:hover,.territory-tile.selected{border:3px solid #fff;background:#b2e77b99;z-index:2}
 .territory-tile.owned{background:#8cce67b8;border-color:#3f813f}.territory-tile.built{background:#6da7b9dd;border-color:#39788a}.territory-tile.resource{background:#eac76a99;border-color:#b58c34}
 .territory-tile:disabled{cursor:default;opacity:.95}
+/* Disabled squares let drag gestures reach the map underneath. */
+.territory-tile:disabled{pointer-events:none}
+#map{touch-action:pan-x pan-y}
 .tile-symbol{filter:drop-shadow(1px 1px #fff8)}
 .fallback-tiles{position:absolute;inset:8%;display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(6,1fr);gap:5px;pointer-events:none}
 .map-legend{position:absolute;z-index:600;bottom:15px;left:15px;display:flex;gap:13px;padding:9px 11px;background:#13212cdd;color:#eef4e8;font-size:10px;z-index:4}
