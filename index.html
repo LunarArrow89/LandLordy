@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#101a24">
   <meta name="description" content="LandLordy — a map-inspired pixel territory game.">
   <title>LandLordy</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -45,7 +46,7 @@
             <div class="fallback-label label-two">PARKSIDE</div>
             <div class="fallback-label label-three">MARKET DISTRICT</div>
             <div id="fallback-tiles" class="fallback-tiles" aria-label="Generated territory tiles"></div>
-            <div class="fallback-note">DEMO MAP · CONNECT GOOGLE MAPS TO USE REAL MAP DATA</div>
+            <div class="fallback-note">LOADING MAP DATA…</div>
           </div>
           <div id="territory-layer" class="territory-layer" aria-label="Territory grid"></div>
           <div class="map-legend"><span><i class="legend-owned"></i> Yours</span><span><i class="legend-open"></i> Available</span><span><i class="legend-resource"></i> Resource</span></div>
@@ -101,16 +102,13 @@
   <dialog id="settings-dialog" class="settings-dialog">
     <form method="dialog" class="dialog-top"><h2>GAME SETTINGS</h2><button class="icon-button" aria-label="Close settings">×</button></form>
     <div class="settings-content">
-      <label for="api-key">Google Maps API key <span class="optional">OPTIONAL</span></label>
-      <input id="api-key" type="password" placeholder="Paste your Maps JavaScript API key">
-      <p class="setting-help">Add a key with Maps JavaScript API enabled to use real map backgrounds. The game grid and territory system work in demo mode without a key. Your key stays in this browser only.</p>
-      <button id="connect-maps" class="primary-button">CONNECT GOOGLE MAPS</button>
+      <p class="setting-help">LandLordy automatically loads map data. Press MY LOCATION to ask your browser for permission to center the map on you. Location is not saved or shared.</p>
       <div class="settings-divider"></div>
       <button id="reset-game" class="danger-button">RESET GAME PROGRESS</button>
-      <p class="setting-help">Use MY LOCATION on the map to request your device location. Your browser will ask permission first. Location is used only in this tab to center your map; it is not saved or shared. You can deny permission or use the game without it.</p>
     </div>
   </dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script src="game.js"></script>
 </body>
 </html>
