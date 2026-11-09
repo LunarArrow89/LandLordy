@@ -36,8 +36,8 @@
       const merged = { ...defaultState(), ...saved };
       const oldResources = saved.resources || {};
       merged.resources = {
-        wood: Number(oldResources.wood ?? oldResources.goods ?? 0),
-        stone: Number(oldResources.stone ?? oldResources.materials ?? 0),
+        wood: Number(oldResources.wood || 0),
+        stone: Number(oldResources.stone || 0),
         population: Number(oldResources.population || 0)
       };
       if (!Number.isFinite(merged.lastProductionAt)) merged.lastProductionAt = Date.now();
