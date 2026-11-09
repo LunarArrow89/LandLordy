@@ -18,6 +18,7 @@
   let currentDevicePosition = null;
   let playerLocationMarker = null;
   let playerTileIndex = null;
+  let visibleTileKeys = [];
 
   function loadState() {
     try {
@@ -30,12 +31,36 @@
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch (_) {}
   }
 
+  function tileKey(index) {
+    return visibleTileKeys[index] || ("unmapped-" + index);
+  }
+
   function tileData(index) {
-    const saved = state.tiles[index];
+    const key = tileKey(index);
+    const saved = state.tiles[key];
     if (saved) return saved;
-    // Fixed, deterministic resource placement so the same generated district is consistent.
-    const resource = index % 11 === 3 ? "wood" : index % 13 === 6 ? "stone" : null;
+    // Generate resources from the geographic square, not its screen position.
+    let hash = 2166136261;
+    for (let i = 0; i < key.length; i++) hash = Math.imul(hash ^ key.charCodeAt(i), 16777619);
+    hash >>>= 0;
+    const roll = hash % 20;
+    const resource = roll === 0 || roll === 1 ? "wood" : roll === 2 || roll === 3 ? "stone" : null;
     return { owner: false, built: false, resource };
+  }
+
+  function updateVisibleTileKeys() {
+    if (!map) return;
+    const size = map.getSize();
+    visibleTileKeys = [];
+    for (let row = 0; row < 6; row++) {
+      for (let col = 0; col < 8; col++) {
+        const center = map.containerPointToLatLng([
+          (col + 0.5) * size.x / 8,
+          (row + 0.5) * size.y / 6
+        ]);
+        visibleTileKeys.push(center.lat.toFixed(4) + "," + center.lng.toFixed(4));
+      }
+    }
   }
 
   function render() {
@@ -53,22 +78,18 @@
   }
 
   function findPlayerTile() {
-    if (!map || !currentDevicePosition || !window.L) return null;
+    if (!map || !currentDevicePosition) return null;
     const point = map.latLngToContainerPoint([currentDevicePosition.lat, currentDevicePosition.lng]);
-    const mapRect = map.getContainer().getBoundingClientRect();
-    const screenX = mapRect.left + point.x;
-    const screenY = mapRect.top + point.y;
-    const buttons = $("territory-layer").querySelectorAll(".territory-tile");
-    for (let i = 0; i < buttons.length; i++) {
-      const rect = buttons[i].getBoundingClientRect();
-      if (screenX >= rect.left && screenX <= rect.right &&
-          screenY >= rect.top && screenY <= rect.bottom) return i;
-    }
-    return null;
+    const size = map.getSize();
+    if (point.x < 0 || point.y < 0 || point.x >= size.x || point.y >= size.y) return null;
+    const col = Math.min(7, Math.floor(point.x / (size.x / 8)));
+    const row = Math.min(5, Math.floor(point.y / (size.y / 6)));
+    return row * 8 + col;
   }
 
   function renderTiles() {
     const layer = map ? $("territory-layer") : $("fallback-tiles");
+    if (map) updateVisibleTileKeys();
     playerTileIndex = findPlayerTile();
     layer.innerHTML = "";
     for (let i = 0; i < TILE_COUNT; i++) {
@@ -145,7 +166,7 @@
     if (data.owner || state.coins < CLAIM_COST) return;
     state.coins -= CLAIM_COST;
     data.owner = true;
-    state.tiles[i] = data;
+    state.tiles[tileKey(i)] = data;
     if (data.resource === "wood") { state.wood += 2; log("Collected 2 wood from your new tile."); }
     if (data.resource === "stone") { state.stone += 2; log("Collected 2 stone from your new tile."); }
     addXp(10);
@@ -162,7 +183,7 @@
     state.coins -= BUILD_COST;
     state.wood -= 1;
     data.built = true;
-    state.tiles[i] = data;
+    state.tiles[tileKey(i)] = data;
     addXp(25);
     state.coins += 50;
     log("Built an outpost on tile " + (i + 1) + ". Starter reward: 50 coins.");
@@ -232,6 +253,7 @@
       $("map-location").textContent = "OPENSTREETMAP · ZOOM " + map.getZoom();
       refreshPlayerTile();
     });
+    map.on("resize", refreshPlayerTile);
     setStatus("OpenStreetMap loaded. Select a tile to claim it!");
     $("map-location").textContent = "OPENSTREETMAP";
     renderTiles();
