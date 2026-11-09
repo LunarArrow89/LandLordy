@@ -23,16 +23,11 @@ You can open `index.html` directly, or publish the repository with GitHub Pages:
 4. Choose `main` and `/ (root)`, then save.
 5. Open the published Pages URL after deployment finishes.
 
-## Optional Google Maps connection
+## Automatic map data
 
-The demo district works without an API key. To show real map backgrounds and search for a city or neighborhood:
+LandLordy automatically loads map tiles from [OpenStreetMap](https://www.openstreetmap.org/) using Leaflet. No Google Maps account, API key, or manual connection is needed.
 
-1. Create a project in the [Google Cloud Console](https://console.cloud.google.com/).
-2. Enable **Maps JavaScript API** and **Geocoding API**.
-3. Create an API key and restrict it to the website domain where possible.
-4. In LandLordy, open the menu, paste the key, and choose **Connect Google Maps**.
-
-Google Maps usage may require billing to be enabled. The key is stored in this browser's local storage; do not commit it to GitHub or share it publicly. For a public release, use appropriate API key restrictions and review Google's current Maps Platform terms.
+Place search uses the OpenStreetMap Nominatim search service. Public map and search services have fair-use limits, so avoid automated or repeated rapid searches. Map tiles include OpenStreetMap attribution.
 
 ## Privacy and safety
 
