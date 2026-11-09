@@ -179,58 +179,32 @@
   function setStatus(message) { $("map-status").textContent = message; }
 
   function useDemoMap() {
-    map = null;
-    $("map").classList.remove("google-ready");
-    $("territory-layer").style.display = "none";
-    $("fallback-tiles").style.display = "grid";
+    $("map").classList.add("map-ready");
+    $("map-fallback").style.display = "none";
+    $("territory-layer").style.display = "grid";
+    if (!window.L) {
+      setStatus("Map library did not load. Check your internet connection and reload.");
+      return;
+    }
+    map = L.map("map", {
+      zoomControl: false,
+      attributionControl: true,
+      scrollWheelZoom: true
+    }).setView([34.0522, -118.2437], 14);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    if (currentDevicePosition) showPlayerOnMap(currentDevicePosition);
+    map.on("moveend zoomend", () => {
+      $("map-location").textContent = "MAP DISTRICT · ZOOM " + map.getZoom();
+    });
+    setStatus("Map loaded. Select a tile to claim it!");
     $("map-location").textContent = "GENERATED STARTER DISTRICT";
     renderTiles();
-  }
-
-  function connectGoogleMaps(key) {
-    if (!key.trim()) { showToast("Enter a Google Maps API key first."); return; }
-    if (window.google && window.google.maps) { initializeMap(); return; }
-    if (mapScriptLoading) return;
-    mapScriptLoading = true;
-    const script = document.createElement("script");
-    script.src = "https://maps.googleapis.com/maps/api/js?key=" + encodeURIComponent(key.trim()) + "&callback=landlordyMapsReady&v=weekly";
-    script.async = true;
-    script.defer = true;
-    window.landlordyMapsReady = () => {
-      mapScriptLoading = false;
-      initializeMap();
-    };
-    script.onerror = () => {
-      mapScriptLoading = false;
-      showToast("Google Maps could not load. Check the key and API settings.");
-    };
-    document.head.appendChild(script);
-  }
-
-  function initializeMap() {
-    if (!window.google || !window.google.maps) return;
-    $("map").classList.add("google-ready");
-    $("territory-layer").style.display = "grid";
-    $("fallback-tiles").style.display = "none";
-    map = new google.maps.Map($("map"), {
-      center: { lat: 34.0522, lng: -118.2437 },
-      zoom: 14,
-      mapTypeId: "roadmap",
-      streetViewControl: false,
-      mapTypeControl: true,
-      fullscreenControl: false,
-      clickableIcons: false,
-      gestureHandling: "greedy"
-    });
-    if (currentDevicePosition) showPlayerOnMap(currentDevicePosition);
-    map.addListener("idle", () => {
-      // The generated game grid is deliberately an abstract overlay, not a claim on real property.
-      $("map-location").textContent = "GENERATED MAP DISTRICT · ZOOM " + map.getZoom();
-      renderTiles();
-    });
-    setStatus("Google Maps connected. Select a game tile to claim it.");
-    showToast("Google Maps connected!");
-    render();
+    setTimeout(() => map.invalidateSize(), 100);
   }
 
   function locatePlayer() {
@@ -249,14 +223,9 @@
         };
         $("locate-me").disabled = false;
         $("locate-me").textContent = "⌖ MY LOCATION";
-        if (map) {
-          showPlayerOnMap(currentDevicePosition);
-          setStatus("Map centered on your current location. Location is only used in this tab.");
-          showToast("Your location is on the map.");
-        } else {
-          setStatus("Location permission granted. Connect Google Maps in settings to show your location on a real map.");
-          showToast("Location received. Connect Google Maps to display it.");
-        }
+        showPlayerOnMap(currentDevicePosition);
+        setStatus("Map centered on your location. Location is only used in this tab.");
+        showToast("Your location is on the map.");
       },
       (error) => {
         $("locate-me").disabled = false;
@@ -272,47 +241,41 @@
   }
 
   function showPlayerOnMap(position) {
-    if (!map || !window.google || !window.google.maps) return;
-    const point = { lat: position.lat, lng: position.lng };
-    map.panTo(point);
-    map.setZoom(16);
-    if (playerLocationMarker) playerLocationMarker.setMap(null);
-    playerLocationMarker = new google.maps.Marker({
-      position: point,
-      map,
-      title: "Your current location",
-      clickable: false,
-      icon: {
-        path: google.maps.SymbolPath.CIRCLE,
-        scale: 8,
-        fillColor: "#4285f4",
-        fillOpacity: 1,
-        strokeColor: "#ffffff",
-        strokeWeight: 3
-      }
-    });
+    if (!map || !window.L) return;
+    const point = [position.lat, position.lng];
+    map.setView(point, 16);
+    if (playerLocationMarker) playerLocationMarker.remove();
+    playerLocationMarker = L.circleMarker(point, {
+      radius: 8,
+      color: "#ffffff",
+      weight: 3,
+      fillColor: "#4285f4",
+      fillOpacity: 1
+    }).addTo(map);
+    playerLocationMarker.bindTooltip("Your current location");
     $("map-location").textContent = "YOUR CURRENT AREA";
   }
 
-  function searchPlace(query) {
+  async function searchPlace(query) {
     if (!query.trim()) return;
-    if (!map) {
-      $("map-location").textContent = "SEARCH: " + query.trim().toUpperCase();
-      setStatus("Demo mode: connect Google Maps in settings to search real places.");
-      showToast("Connect Google Maps to search real places.");
-      return;
-    }
-    const geocoder = new google.maps.Geocoder();
-    geocoder.geocode({ address: query.trim() }, (results, status) => {
-      if (status === "OK" && results[0]) {
-        map.setCenter(results[0].geometry.location);
-        map.setZoom(15);
-        $("map-location").textContent = results[0].formatted_address.toUpperCase();
-        setStatus("District generated around " + results[0].address_components[0].long_name + ".");
-      } else {
+    setStatus("Searching for " + query.trim() + "…");
+    try {
+      const response = await fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=" + encodeURIComponent(query.trim()));
+      if (!response.ok) throw new Error("Search unavailable");
+      const results = await response.json();
+      if (!results.length) {
         showToast("Place not found. Try a city or neighborhood.");
+        setStatus("No matching place found.");
+        return;
       }
-    });
+      const place = results[0];
+      map.setView([Number(place.lat), Number(place.lon)], 15);
+      $("map-location").textContent = (place.display_name || query).split(",").slice(0, 3).join(", ").toUpperCase();
+      setStatus("Map moved to the place you searched for.");
+    } catch (_) {
+      showToast("Place search failed. Try again in a moment.");
+      setStatus("Could not search for that place.");
+    }
   }
 
   $("claim-button").addEventListener("click", claimSelected);
@@ -323,18 +286,12 @@
     event.preventDefault();
     searchPlace($("place-search").value);
   });
-  $("zoom-in").addEventListener("click", () => map ? map.setZoom(map.getZoom() + 1) : showToast("Connect Google Maps to zoom the real map."));
-  $("zoom-out").addEventListener("click", () => map ? map.setZoom(map.getZoom() - 1) : showToast("Connect Google Maps to zoom the real map."));
+  $("zoom-in").addEventListener("click", () => map ? map.zoomIn() : showToast("Map is still loading."));
+  $("zoom-out").addEventListener("click", () => map ? map.zoomOut() : showToast("Map is still loading."));
   $("reset-map").addEventListener("click", () => {
-    if (map) { map.setCenter({ lat: 34.0522, lng: -118.2437 }); map.setZoom(14); }
-    else { $("place-search").value = ""; $("map-location").textContent = "GENERATED STARTER DISTRICT"; }
-  });
-  $("connect-maps").addEventListener("click", () => {
-    const key = $("api-key").value.trim();
-    if (key) {
-      try { localStorage.setItem("landlordy-maps-key", key); } catch (_) {}
-      connectGoogleMaps(key);
-    }
+    $("place-search").value = "";
+    if (map) map.setView([34.0522, -118.2437], 14);
+    $("map-location").textContent = "GENERATED STARTER DISTRICT";
   });
   $("clear-log").addEventListener("click", () => { $("activity-log").innerHTML = ""; });
   $("reset-game").addEventListener("click", () => {
