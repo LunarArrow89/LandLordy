@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101a24">
+  <meta name="description" content="LandLordy — a map-inspired pixel territory game.">
+  <title>LandLordy</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="LandLordy home"><span class="brand-mark">L</span><span>LANDLORDY</span></a>
+      <div class="top-stats" aria-live="polite">
+        <div class="stat"><span class="stat-label">COINS</span><strong id="coins">120</strong></div>
+        <div class="stat"><span class="stat-label">LAND</span><strong id="land-count">0</strong></div>
+        <div class="stat"><span class="stat-label">LEVEL</span><strong id="level">1</strong></div>
+      </div>
+      <button id="menu-button" class="icon-button" aria-label="Open settings">☰</button>
+    </header>
+
+    <main class="main-layout">
+      <section class="map-panel" aria-label="Game map">
+        <div class="map-toolbar">
+          <form id="search-form" class="search-form">
+            <label class="sr-only" for="place-search">Search for a city or place</label>
+            <input id="place-search" type="search" placeholder="Search a city or place…" autocomplete="off">
+            <button type="submit">GO</button>
+          </form>
+          <div class="map-actions">
+            <button id="zoom-in" class="tool-button" aria-label="Zoom in">＋</button>
+            <button id="zoom-out" class="tool-button" aria-label="Zoom out">−</button>
+            <button id="reset-map" class="tool-button">RESET</button>
+          </div>
+        </div>
+
+        <div id="map" class="map">
+          <div id="map-fallback" class="map-fallback">
+            <div class="fallback-grid" aria-hidden="true"></div>
+            <div class="fallback-river" aria-hidden="true"></div>
+            <div class="fallback-road road-one" aria-hidden="true"></div>
+            <div class="fallback-road road-two" aria-hidden="true"></div>
+            <div class="fallback-label label-one">OLD TOWN</div>
+            <div class="fallback-label label-two">PARKSIDE</div>
+            <div class="fallback-label label-three">MARKET DISTRICT</div>
+            <div id="fallback-tiles" class="fallback-tiles" aria-label="Generated territory tiles"></div>
+            <div class="fallback-note">DEMO MAP · CONNECT GOOGLE MAPS TO USE REAL MAP DATA</div>
+          </div>
+          <div id="territory-layer" class="territory-layer" aria-label="Territory grid"></div>
+          <div class="map-legend"><span><i class="legend-owned"></i> Yours</span><span><i class="legend-open"></i> Available</span><span><i class="legend-resource"></i> Resource</span></div>
+          <div id="map-status" class="map-status" role="status">Demo map ready — claim a nearby tile!</div>
+        </div>
+        <div class="map-footer"><span id="map-location">GENERATED STARTER DISTRICT</span><span>MAP DATA IS FOR GAMEPLAY ONLY</span></div>
+      </section>
+
+      <aside class="side-panel">
+        <section class="welcome-card">
+          <p class="eyebrow">YOUR LITTLE EMPIRE</p>
+          <h1>Make this place<br><span>your place.</span></h1>
+          <p class="welcome-copy">Claim tiles, collect supplies and grow your territory. Everything happens right here on the map.</p>
+        </section>
+
+        <section class="action-card">
+          <div class="section-heading"><h2>SELECTED TILE</h2><span id="tile-tag" class="tag">NONE</span></div>
+          <div id="tile-details" class="tile-details">
+            <div class="tile-icon">▦</div>
+            <div><strong>Pick a tile</strong><p>Select any open square on the map to see what it contains.</p></div>
+          </div>
+          <div class="tile-actions">
+            <button id="claim-button" class="primary-button" disabled>CLAIM TILE · 25 COINS</button>
+            <button id="build-button" class="secondary-button" disabled>BUILD · 40 COINS</button>
+          </div>
+        </section>
+
+        <section class="inventory-card">
+          <div class="section-heading"><h2>SUPPLIES</h2><span class="subtle">YOUR INVENTORY</span></div>
+          <div class="inventory-grid">
+            <div class="inventory-item"><span class="supply-icon wood">▥</span><span>WOOD</span><strong id="wood">3</strong></div>
+            <div class="inventory-item"><span class="supply-icon stone">◆</span><span>STONE</span><strong id="stone">2</strong></div>
+            <div class="inventory-item"><span class="supply-icon energy">✦</span><span>ENERGY</span><strong id="energy">5</strong></div>
+          </div>
+        </section>
+
+        <section class="missions-card">
+          <div class="section-heading"><h2>FIRST STEPS</h2><span class="tag tag-gold">STARTER</span></div>
+          <div class="mission"><span class="mission-check" id="mission-claim">○</span><div><strong>Claim your first tile</strong><p>Choose an open square to get started.</p></div><span class="reward">+25</span></div>
+          <div class="mission"><span class="mission-check" id="mission-build">○</span><div><strong>Build an outpost</strong><p>Build on one of your claimed tiles.</p></div><span class="reward">+50</span></div>
+        </section>
+
+        <section class="activity-card">
+          <div class="section-heading"><h2>ACTIVITY</h2><button id="clear-log" class="text-button">CLEAR</button></div>
+          <ul id="activity-log" class="activity-log"><li><span class="activity-dot"></span><span>Your journey begins. Welcome to LandLordy!</span></li></ul>
+        </section>
+      </aside>
+    </main>
+
+    <footer class="footer"><span>LANDLORDY · A MAP-INSPIRED TERRITORY GAME</span><span>PLAY FROM YOUR SCREEN — NO TRAVEL REQUIRED</span></footer>
+  </div>
+
+  <dialog id="settings-dialog" class="settings-dialog">
+    <form method="dialog" class="dialog-top"><h2>GAME SETTINGS</h2><button class="icon-button" aria-label="Close settings">×</button></form>
+    <div class="settings-content">
+      <label for="api-key">Google Maps API key <span class="optional">OPTIONAL</span></label>
+      <input id="api-key" type="password" placeholder="Paste your Maps JavaScript API key">
+      <p class="setting-help">Add a key with Maps JavaScript API enabled to use real map backgrounds. The game grid and territory system work in demo mode without a key. Your key stays in this browser only.</p>
+      <button id="connect-maps" class="primary-button">CONNECT GOOGLE MAPS</button>
+      <div class="settings-divider"></div>
+      <button id="reset-game" class="danger-button">RESET GAME PROGRESS</button>
+      <p class="setting-help">LandLordy is a screen-based strategy game. It does not track your live location or share your coordinates.</p>
+    </div>
+  </dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="game.js"></script>
+</body>
+</html>
