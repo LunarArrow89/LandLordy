@@ -3,7 +3,7 @@
 
   const SAVE_KEY = "landlordy-save-v1";
   const BASE_TILE_ZOOM = 16;
-  const TILE_SIZE = 64;
+  const TILE_SIZE = 16;
   const CLAIM_COST = 25;
     const $ = (id) => document.getElementById(id);
 
