@@ -2,7 +2,6 @@
   "use strict";
 
   const SAVE_KEY = "landlordy-save-v1";
-  const MAP_KEY_STORAGE = "landlordy-google-maps-key-v1";
   const TILE_COUNT = 48;
   const CLAIM_COST = 25;
   const BUILD_COST = 40;
@@ -15,9 +14,6 @@
 
   let state = loadState();
   let map = null;
-  let googleMapsLoading = null;
-  let googleMapMarker = null;
-  let googleMapCircle = null;
   let toastTimer = null;
   let currentDevicePosition = null;
   let playerLocationMarker = null;
@@ -182,103 +178,42 @@
   function setStatus(message) { $("map-status").textContent = message; }
 
   function useDemoMap() {
-    $("map").classList.remove("map-ready");
-    $("map-fallback").style.display = "block";
-    $("territory-layer").style.display = "none";
-    renderTiles();
-    const savedKey = localStorage.getItem(MAP_KEY_STORAGE) || "";
-    $("google-maps-key").value = savedKey;
-    if (savedKey) loadGoogleMaps(savedKey);
-    else setStatus("Add your Google Maps API key in the menu to load Google Maps.");
-  }
-
-  function loadGoogleMaps(apiKey) {
-    if (!apiKey || !apiKey.trim()) {
-      setStatus("Enter a Google Maps API key in settings.");
-      return;
-    }
-    if (window.google && window.google.maps) {
-      initializeGoogleMap();
-      return;
-    }
-    if (googleMapsLoading) return googleMapsLoading;
-    setStatus("Loading Google Maps…");
-    googleMapsLoading = new Promise((resolve, reject) => {
-      const callbackName = "__landlordyGoogleMapsReady";
-      window[callbackName] = () => {
-        delete window[callbackName];
-        resolve();
-      };
-      const script = document.createElement("script");
-      script.src = "https://maps.googleapis.com/maps/api/js?key=" + encodeURIComponent(apiKey.trim()) + "&callback=" + callbackName + "&v=weekly";
-      script.async = true;
-      script.defer = true;
-      script.onerror = () => {
-        delete window[callbackName];
-        googleMapsLoading = null;
-        reject(new Error("Google Maps could not load. Check the API key and enabled API."));
-      };
-      document.head.appendChild(script);
-    }).then(() => {
-      initializeGoogleMap();
-      googleMapsLoading = null;
-    }).catch((error) => {
-      googleMapsLoading = null;
-      setStatus(error.message + " Check your key and Maps JavaScript API settings.");
-      showToast("Google Maps could not load. Check your API key.");
-    });
-    return googleMapsLoading;
-  }
-
-  function initializeGoogleMap() {
-    if (!window.google || !window.google.maps) return;
-    if (!map) {
-      map = new google.maps.Map($("map"), {
-        center: currentDevicePosition || { lat: 34.0522, lng: -118.2437 },
-        zoom: currentDevicePosition ? 16 : 14,
-        mapTypeControl: true,
-        streetViewControl: false,
-        fullscreenControl: true,
-        clickableIcons: false,
-        gestureHandling: "greedy"
-      });
-      map.addListener("idle", () => {
-        $("map-location").textContent = "GOOGLE MAPS · ZOOM " + map.getZoom();
-      });
-    }
+    // Clear any old Google Maps key saved by the previous experimental setup.
+    try { localStorage.removeItem("landlordy-google-maps-key-v1"); } catch (_) {}
     $("map").classList.add("map-ready");
+    if (!window.L) {
+      $("map-fallback").style.display = "block";
+      $("territory-layer").style.display = "none";
+      setStatus("Map library did not load. Check your internet connection and reload.");
+      return;
+    }
+
+    map = L.map("map", {
+      zoomControl: false,
+      attributionControl: true,
+      scrollWheelZoom: true
+    }).setView([34.0522, -118.2437], 14);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
     $("map-fallback").style.display = "none";
     $("territory-layer").style.display = "grid";
+
     if (currentDevicePosition) showPlayerOnMap(currentDevicePosition);
+    map.on("moveend zoomend", () => {
+      $("map-location").textContent = "OPENSTREETMAP · ZOOM " + map.getZoom();
+    });
+    setStatus("OpenStreetMap loaded. Select a tile to claim it!");
+    $("map-location").textContent = "OPENSTREETMAP";
     renderTiles();
-    setStatus("Google Maps loaded. Select a tile to claim it!");
-    $("map-location").textContent = "GOOGLE MAPS";
-  }
-
-  function saveGoogleMapsKey() {
-    const key = $("google-maps-key").value.trim();
-    if (!key) {
-      showToast("Paste your Google Maps API key first.");
-      return;
-    }
-    localStorage.setItem(MAP_KEY_STORAGE, key);
-    showToast("API key saved in this browser. Reloading the map…");
-    window.location.reload();
-  }
-
-  function clearGoogleMapsKey() {
-    localStorage.removeItem(MAP_KEY_STORAGE);
-    $("google-maps-key").value = "";
-    showToast("Saved API key cleared from this browser.");
-    window.location.reload();
+    setTimeout(() => map.invalidateSize(), 100);
   }
 
 
   function locatePlayer() {
-    if (!map) {
-      showToast("Add your Google Maps API key in the menu first.");
-      return;
-    }
     if (!navigator.geolocation) {
       showToast("Location is not available in this browser.");
       return;
@@ -312,36 +247,24 @@
   }
 
   function showPlayerOnMap(position) {
-    if (!map || !window.google || !window.google.maps) return;
-    const point = { lat: position.lat, lng: position.lng };
-    map.setCenter(point);
-    map.setZoom(16);
-    if (googleMapMarker) googleMapMarker.setMap(null);
-    if (googleMapCircle) googleMapCircle.setMap(null);
-    googleMapMarker = new google.maps.Marker({
-      position: point,
-      map,
-      title: "Your current location"
-    });
-    googleMapCircle = new google.maps.Circle({
-      map,
-      center: point,
-      radius: 35,
+    if (!map || !window.L) return;
+    const point = [position.lat, position.lng];
+    map.setView(point, 16);
+    if (playerLocationMarker) playerLocationMarker.remove();
+    playerLocationMarker = L.circleMarker(point, {
+      radius: 8,
+      color: "#ffffff",
+      weight: 3,
       fillColor: "#4285f4",
-      fillOpacity: 0.12,
-      strokeColor: "#4285f4",
-      strokeOpacity: 0.65,
-      strokeWeight: 1
-    });
+      fillOpacity: 1
+    }).addTo(map);
+    playerLocationMarker.bindTooltip("Your current location");
     $("map-location").textContent = "YOUR CURRENT AREA";
   }
 
   async function searchPlace(query) {
     if (!query.trim()) return;
-    if (!map) {
-      showToast("Add your Google Maps API key in the menu first.");
-      return;
-    }
+    if (!map) { showToast("Map is still loading. Try again in a moment."); return; }
     setStatus("Searching for " + query.trim() + "…");
     try {
       const response = await fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=" + encodeURIComponent(query.trim()));
@@ -353,8 +276,7 @@
         return;
       }
       const place = results[0];
-      map.setCenter({ lat: Number(place.lat), lng: Number(place.lon) });
-      map.setZoom(15);
+      map.setView([Number(place.lat), Number(place.lon)], 15);
       $("map-location").textContent = (place.display_name || query).split(",").slice(0, 3).join(", ").toUpperCase();
       setStatus("Map moved to the place you searched for.");
     } catch (_) {
@@ -365,8 +287,6 @@
 
   $("claim-button").addEventListener("click", claimSelected);
   $("locate-me").addEventListener("click", locatePlayer);
-  $("save-map-key").addEventListener("click", saveGoogleMapsKey);
-  $("clear-map-key").addEventListener("click", clearGoogleMapsKey);
   $("build-button").addEventListener("click", buildSelected);
   $("menu-button").addEventListener("click", () => $("settings-dialog").showModal());
   $("search-form").addEventListener("submit", (event) => {
@@ -377,7 +297,7 @@
   $("zoom-out").addEventListener("click", () => map ? map.zoomOut() : showToast("Map is still loading."));
   $("reset-map").addEventListener("click", () => {
     $("place-search").value = "";
-    if (map) { map.setCenter({ lat: 34.0522, lng: -118.2437 }); map.setZoom(14); }
+    if (map) map.setView([34.0522, -118.2437], 14);
     $("map-location").textContent = "GENERATED STARTER DISTRICT";
   });
   $("clear-log").addEventListener("click", () => { $("activity-log").innerHTML = ""; });
