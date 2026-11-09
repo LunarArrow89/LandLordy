@@ -16,7 +16,7 @@
       <div class="top-stats" aria-live="polite">
         <div class="stat"><span class="stat-label">COINS</span><strong id="coins">120</strong></div>
         <div class="stat"><span class="stat-label">LAND</span><strong id="land-count">0</strong></div>
-        <div class="stat"><span class="stat-label">LEVEL</span><strong id="level">1</strong></div>
+        
       </div>
       <button id="menu-button" class="icon-button" aria-label="Open settings">☰</button>
     </header>
@@ -49,7 +49,7 @@
             <div class="fallback-note">LOADING MAP DATA…</div>
           </div>
           <div id="territory-layer" class="territory-layer" aria-label="Territory grid"></div>
-          <div class="map-legend"><span><i class="legend-owned"></i> Yours</span><span><i class="legend-open"></i> Available</span><span><i class="legend-resource"></i> Resource</span></div>
+          <div class="map-legend"><span><i class="legend-owned"></i> Yours</span><span><i class="legend-open"></i> Available</span></div>
           <div id="map-status" class="map-status" role="status">Demo map ready — claim a nearby tile!</div>
         </div>
         <div class="map-footer"><span id="map-location">GENERATED STARTER DISTRICT</span><span>MAP DATA IS FOR GAMEPLAY ONLY</span></div>
@@ -59,7 +59,7 @@
         <section class="welcome-card">
           <p class="eyebrow">YOUR LITTLE EMPIRE</p>
           <h1>Make this place<br><span>your place.</span></h1>
-          <p class="welcome-copy">Claim tiles, collect supplies and grow your territory. Everything happens right here on the map.</p>
+          <p class="welcome-copy">Claim squares of land and grow your territory. Every square you claim becomes part of your land.</p>
         </section>
 
         <section class="action-card">
@@ -70,23 +70,7 @@
           </div>
           <div class="tile-actions">
             <button id="claim-button" class="primary-button" disabled>CLAIM TILE · 25 COINS</button>
-            <button id="build-button" class="secondary-button" disabled>BUILD · 40 COINS</button>
           </div>
-        </section>
-
-        <section class="inventory-card">
-          <div class="section-heading"><h2>SUPPLIES</h2><span class="subtle">YOUR INVENTORY</span></div>
-          <div class="inventory-grid">
-            <div class="inventory-item"><span class="supply-icon wood">▥</span><span>WOOD</span><strong id="wood">3</strong></div>
-            <div class="inventory-item"><span class="supply-icon stone">◆</span><span>STONE</span><strong id="stone">2</strong></div>
-            <div class="inventory-item"><span class="supply-icon energy">✦</span><span>ENERGY</span><strong id="energy">5</strong></div>
-          </div>
-        </section>
-
-        <section class="missions-card">
-          <div class="section-heading"><h2>FIRST STEPS</h2><span class="tag tag-gold">STARTER</span></div>
-          <div class="mission"><span class="mission-check" id="mission-claim">○</span><div><strong>Claim your first tile</strong><p>Choose an open square to get started.</p></div><span class="reward">+25</span></div>
-          <div class="mission"><span class="mission-check" id="mission-build">○</span><div><strong>Build an outpost</strong><p>Build on one of your claimed tiles.</p></div><span class="reward">+50</span></div>
         </section>
 
         <section class="activity-card">
