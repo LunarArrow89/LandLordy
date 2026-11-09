@@ -146,8 +146,10 @@
     const text = document.createElement("span");
     text.textContent = message;
     li.append(dot, text);
-    $("activity-log").prepend(li);
-    while ($("activity-log").children.length > 12) $("activity-log").lastElementChild.remove();
+    const activityLog = $("activity-log");
+    if (!activityLog) return;
+    activityLog.prepend(li);
+    while (activityLog.children.length > 12) activityLog.lastElementChild.remove();
   }
 
   function showToast(message) {
@@ -187,12 +189,14 @@
 
     if (currentDevicePosition) showPlayerOnMap(currentDevicePosition);
     map.on("moveend zoomend", () => {
-      $("map-location").textContent = "OPENSTREETMAP · ZOOM " + map.getZoom();
+      const locationLabel = $("map-location");
+      if (locationLabel) locationLabel.textContent = "OPENSTREETMAP · ZOOM " + map.getZoom();
       refreshPlayerTile();
     });
     map.on("resize", refreshPlayerTile);
     setStatus("OpenStreetMap loaded. Select a tile to claim it!");
-    $("map-location").textContent = "OPENSTREETMAP";
+    const locationLabel = $("map-location");
+    if (locationLabel) locationLabel.textContent = "OPENSTREETMAP";
     renderTiles();
     setTimeout(() => map.invalidateSize(), 100);
   }
@@ -258,7 +262,8 @@
       fillOpacity: 1
     }).addTo(map);
     playerLocationMarker.bindTooltip("Your current location");
-    $("map-location").textContent = "YOUR CURRENT AREA";
+    const locationLabel = $("map-location");
+    if (locationLabel) locationLabel.textContent = "YOUR CURRENT AREA";
     setStatus("Moving the map to your location…");
   }
 
@@ -286,7 +291,8 @@
       }
       const place = results[0];
       map.setView([Number(place.lat), Number(place.lon)], 15);
-      $("map-location").textContent = (place.display_name || query).split(",").slice(0, 3).join(", ").toUpperCase();
+      const locationLabel = $("map-location");
+      if (locationLabel) locationLabel.textContent = (place.display_name || query).split(",").slice(0, 3).join(", ").toUpperCase();
       setStatus("Map moved to the place you searched for.");
     } catch (_) {
       showToast("Place search failed. Try again in a moment.");
@@ -306,14 +312,15 @@
   $("reset-map").addEventListener("click", () => {
     $("place-search").value = "";
     if (map) map.setView([34.0522, -118.2437], 14);
-    $("map-location").textContent = "GENERATED STARTER DISTRICT";
+    const locationLabel = $("map-location");
+    if (locationLabel) locationLabel.textContent = "GENERATED STARTER DISTRICT";
     refreshPlayerTile();
   });
-  $("clear-log").addEventListener("click", () => { $("activity-log").innerHTML = ""; });
   $("reset-game").addEventListener("click", () => {
     if (!window.confirm("Reset all LandLordy progress on this browser?")) return;
     state = defaultState();
-    $("activity-log").innerHTML = "";
+    const activityLog = $("activity-log");
+    if (activityLog) activityLog.innerHTML = "";
     log("A fresh district awaits. Welcome back!");
     render();
     $("settings-dialog").close();
