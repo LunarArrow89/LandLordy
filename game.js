@@ -188,6 +188,9 @@
     $("territory-layer").style.display = "grid";
 
     if (currentDevicePosition) showPlayerOnMap(currentDevicePosition);
+    // Keep the territory grid attached to geographic coordinates while the map is dragged.
+    // Leaflet updates container-point positions during "move", not only after the drag ends.
+    map.on("move", renderTiles);
     map.on("moveend zoomend", () => {
       const locationLabel = $("map-location");
       if (locationLabel) locationLabel.textContent = "OPENSTREETMAP · ZOOM " + map.getZoom();
